@@ -7,7 +7,7 @@
 
 * Search keys for substring 'example.com':
   
-  `> vault-kv-search --search=value secret/ example.com`
+  `> vault-kv-search --search=key secret/ example.com`
   
 * Search keys and values for substring 'example.com':
 
