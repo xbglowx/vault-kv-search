@@ -17,10 +17,9 @@ type vaultClient struct {
 	wg           sync.WaitGroup
 }
 
-func VaultKvSearch(args []string, search []string) {
+func vaultKvSearch(args []string, search []string) {
 	config := vault.DefaultConfig()
 	config.Timeout = time.Second * 5
-	fmt.Println(search)
 
 	client, err := vault.NewClient(config)
 	if err != nil {
@@ -34,7 +33,7 @@ func VaultKvSearch(args []string, search []string) {
 	}
 
 	startPath := args[0]
-	fmt.Println(startPath)
+	//fmt.Println(startPath)
 	vc.readLeafs(startPath)
 	vc.wg.Wait()
 }
@@ -85,6 +84,7 @@ func (vc *vaultClient) readLeafs(path string) {
 					os.Exit(1)
 				}
 
+				fmt.Printf("Searching against: %v\n", searchObject)
 				if strings.Contains(x, vc.searchString) {
 					fmt.Printf("Match found:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
 				}

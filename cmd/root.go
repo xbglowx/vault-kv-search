@@ -16,10 +16,30 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-//var cfgFile string
+func checkRequiredFlags(cmd *cobra.Command) error {
+	searchObjectChoices := map[string]struct{}{
+		"key" : {},
+		"value": {},
+	}
+
+	keys := []string{}
+	for key, _ := range searchObjectChoices {
+		keys = append(keys, key)
+	}
+
+	for _, s := range searchObject {
+		if _, ok := searchObjectChoices[s]; ! ok {
+			errorMsg := fmt.Sprintf("%s is not a valid flag choice. Choices are %v", s, keys)
+			return errors.New(errorMsg)
+		}
+	}
+	return nil
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -27,13 +47,14 @@ var rootCmd = &cobra.Command{
 	Short: "Search Hashicorp Vault",
 	Long: `Search for a substring in Hashicorp Vault
 
-Substring can be searched against either the key and/or its value`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) {
-		VaultKvSearch(args, searchObject)
+Recursively search Hashicorp Vault for substring`,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return checkRequiredFlags(cmd)
 	},
-	Args: cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		vaultKvSearch(args, searchObject)
+	},
+	Args:    cobra.ExactArgs(2),
 	Example: "vault-kv-search secret/ foo",
 }
 
@@ -57,28 +78,31 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.Flags().StringSliceVar(&searchObject, "search", []string{"value"}, "Which Vault objects to search against. Choices are any and all of the following 'key,value'. Can be specified multiple times or once using format CSV. Defaults to 'value'")
+	rootCmd.Flags().StringSliceVar(&searchObject, "search", []string{"value"}, "Which Vault objects to "+
+		"search against. Choices are any and all of the following 'key,value'. Can be specified multiple times or "+
+		"once using format CSV. Defaults to 'value'")
+
 }
 
 // initConfig reads in config file and ENV variables if set.
 //func initConfig() {
 //	if cfgFile != "" {
 //		Use config file from the flag.
-		//viper.SetConfigFile(cfgFile)
-	//} else {
-	//	Find home directory.
-		//home, err := homedir.Dir()
-		//cobra.CheckErr(err)
-		//
-		//Search config in home directory with name ".vault-kv-search" (without extension).
-		//viper.AddConfigPath(home)
-		//viper.SetConfigName(".vault-kv-search")
-	//}
-	//
-	//viper.AutomaticEnv() // read in environment variables that match
-	//
-	//If a config file is found, read it in.
-	//if err := viper.ReadInConfig(); err == nil {
-	//	fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	//}
+//viper.SetConfigFile(cfgFile)
+//} else {
+//	Find home directory.
+//home, err := homedir.Dir()
+//cobra.CheckErr(err)
+//
+//Search config in home directory with name ".vault-kv-search" (without extension).
+//viper.AddConfigPath(home)
+//viper.SetConfigName(".vault-kv-search")
+//}
+//
+//viper.AutomaticEnv() // read in environment variables that match
+//
+//If a config file is found, read it in.
+//if err := viper.ReadInConfig(); err == nil {
+//	fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+//}
 //}
