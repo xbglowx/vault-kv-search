@@ -12,12 +12,13 @@ import (
 )
 
 type vaultClient struct {
-	logical      *vault.Logical
-	searchString string
-	wg           sync.WaitGroup
+	logical       *vault.Logical
+	searchString  string
+	searchObjects []string
+	wg            sync.WaitGroup
 }
 
-func vaultKvSearch(args []string, search []string) {
+func vaultKvSearch(args []string, searchObjects []string) {
 	config := vault.DefaultConfig()
 	config.Timeout = time.Second * 5
 
@@ -29,11 +30,12 @@ func vaultKvSearch(args []string, search []string) {
 	vc := vaultClient{
 		logical:      client.Logical(),
 		searchString: args[1],
+		searchObjects: searchObjects,
 		wg:           sync.WaitGroup{},
 	}
 
+	fmt.Printf("Searching for substring '%s' against: %v\n", args[1], searchObjects)
 	startPath := args[0]
-	//fmt.Println(startPath)
 	vc.readLeafs(startPath)
 	vc.wg.Wait()
 }
@@ -69,24 +71,30 @@ func (vc *vaultClient) readLeafs(path string) {
 				os.Exit(1)
 			}
 
-			// Convert types to strings
-			var x string
-			for key, value := range secretInfo.Data {
-				switch v := value.(type) {
-				case string:
-					x = value.(string)
-				case json.Number:
-					x = v.String()
-				case bool:
-					x = strconv.FormatBool(v)
-				default:
-					fmt.Printf("I don't know what %T is\n", v)
-					os.Exit(1)
-				}
+			for _, searchObject := range searchObjects {
+				// Convert types to strings
+				var valueStringType string
+				for key, value := range secretInfo.Data {
+					switch v := value.(type) {
+					case string:
+						valueStringType = value.(string)
+					case json.Number:
+						valueStringType = v.String()
+					case bool:
+						valueStringType = strconv.FormatBool(v)
+					default:
+						fmt.Printf("I don't know what %T is\n", v)
+						os.Exit(1)
+					}
 
-				fmt.Printf("Searching against: %v\n", searchObject)
-				if strings.Contains(x, vc.searchString) {
-					fmt.Printf("Match found:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+					//fmt.Printf("Searching against: %v\n", searchObjects)
+					if strings.Contains(valueStringType, vc.searchString) && searchObject == "value" {
+						fmt.Printf("Value match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+					}
+
+					if strings.Contains(key, vc.searchString) && searchObject == "key" {
+						fmt.Printf("Key match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+					}
 				}
 			}
 		}
