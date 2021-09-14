@@ -62,7 +62,10 @@ func (vc *vaultClient) readLeafs(path string) {
 		fullPath := fmt.Sprintf("%s%s", path, dirEntry)
 		if strings.HasSuffix(dirEntry, "/") {
 			vc.wg.Add(1)
-			go vc.readLeafs(fullPath)
+			go func() {
+				defer vc.wg.Done()
+				vc.readLeafs(fullPath)
+			}()
 
 		} else {
 			secretInfo, err := vc.logical.Read(fullPath)
@@ -87,7 +90,6 @@ func (vc *vaultClient) readLeafs(path string) {
 						os.Exit(1)
 					}
 
-					//fmt.Printf("Searching against: %v\n", searchObjects)
 					if strings.Contains(valueStringType, vc.searchString) && searchObject == "value" {
 						fmt.Printf("Value match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
 					}
@@ -99,5 +101,4 @@ func (vc *vaultClient) readLeafs(path string) {
 			}
 		}
 	}
-	vc.wg.Done()
 }
