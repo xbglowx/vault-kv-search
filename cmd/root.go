@@ -23,8 +23,9 @@ import (
 
 func checkRequiredFlags(cmd *cobra.Command) error {
 	searchObjectChoices := map[string]struct{}{
-		"key" : {},
+		"key":   {},
 		"value": {},
+		"path":  {},
 	}
 
 	keys := []string{}
@@ -33,7 +34,7 @@ func checkRequiredFlags(cmd *cobra.Command) error {
 	}
 
 	for _, s := range searchObjects {
-		if _, ok := searchObjectChoices[s]; ! ok {
+		if _, ok := searchObjectChoices[s]; !ok {
 			errorMsg := fmt.Sprintf("%s is not a valid flag choice. Choices are %v", s, keys)
 			return errors.New(errorMsg)
 		}
@@ -69,7 +70,7 @@ var searchObjects []string
 func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.Flags().StringSliceVar(&searchObjects, "search", []string{"value"}, "Which Vault objects to "+
-		"search against. Choices are any and all of the following 'key,value'. Can be specified multiple times or "+
+		"search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or "+
 		"once using format CSV. Defaults to 'value'")
 
 }
