@@ -28,20 +28,26 @@ func vaultKvSearch(args []string, searchObjects []string) {
 	}
 
 	vc := vaultClient{
-		logical:      client.Logical(),
-		searchString: args[1],
+		logical:       client.Logical(),
+		searchString:  args[1],
 		searchObjects: searchObjects,
-		wg:           sync.WaitGroup{},
+		wg:            sync.WaitGroup{},
 	}
 
 	fmt.Printf("Searching for substring '%s' against: %v\n", args[1], searchObjects)
-	startPath := args[0]
-	vc.readLeafs(startPath)
+	startPath := strings.Replace(args[0], "/", "/metadata/", 1)
+	if ok := strings.HasSuffix(startPath, "/"); !ok {
+		startPath += "/"
+	}
+	fmt.Printf("StartPath: %s\n", startPath)
+
+	vc.readLeafs(startPath, searchObjects)
 	vc.wg.Wait()
 }
 
-func (vc *vaultClient) readLeafs(path string) {
+func (vc *vaultClient) readLeafs(path string, searchObjects []string) {
 	pathList, err := vc.logical.List(path)
+
 	if err != nil {
 		fmt.Printf("Failed to list: %s\n%s", vc.searchString, err)
 		os.Exit(1)
@@ -64,10 +70,11 @@ func (vc *vaultClient) readLeafs(path string) {
 			vc.wg.Add(1)
 			go func() {
 				defer vc.wg.Done()
-				vc.readLeafs(fullPath)
+				vc.readLeafs(fullPath, searchObjects)
 			}()
 
 		} else {
+			fullPath = strings.Replace(fullPath, "/metadata", "/data", 1)
 			secretInfo, err := vc.logical.Read(fullPath)
 			if err != nil {
 				fmt.Println(err)
@@ -78,6 +85,9 @@ func (vc *vaultClient) readLeafs(path string) {
 				// Convert types to strings
 				var valueStringType string
 				for key, value := range secretInfo.Data {
+					if key == "metadata" {
+						continue
+					}
 					switch v := value.(type) {
 					case string:
 						valueStringType = value.(string)
@@ -85,18 +95,28 @@ func (vc *vaultClient) readLeafs(path string) {
 						valueStringType = v.String()
 					case bool:
 						valueStringType = strconv.FormatBool(v)
+					case map[string]interface{}:
+						valueStringType = fmt.Sprint(value)
+					case nil:
 					default:
 						fmt.Printf("I don't know what %T is\n", v)
 						os.Exit(1)
+					}
+
+					fullPath = strings.Replace(fullPath, "/data", "", 1)
+
+					if strings.Contains(dirEntry, vc.searchString) && searchObject == "path" {
+						fmt.Printf("Key match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+					}
+
+					if strings.Contains(key, vc.searchString) && searchObject == "key" {
+						fmt.Printf("Key match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
 					}
 
 					if strings.Contains(valueStringType, vc.searchString) && searchObject == "value" {
 						fmt.Printf("Value match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
 					}
 
-					if strings.Contains(key, vc.searchString) && searchObject == "key" {
-						fmt.Printf("Key match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
-					}
 				}
 			}
 		}

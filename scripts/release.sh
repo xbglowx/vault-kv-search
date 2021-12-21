@@ -22,13 +22,14 @@ export GOARCH
 
 : "${GITHUB_TOKEN:?Need to set environment variable GITHUB_TOKEN}"
 
-OUTPUT=$(curl -s -XPOST \
-    -H "Authorization: token $GITHUB_TOKEN" \
-    -H "Content-Type: application/json" \
-    --data "{\"tag_name\": \"v$RELEASE\"}" \
-    https://api.github.com/repos/xbglowx/vault-kv-search/releases
+OUTPUT=$(
+    curl -s -XPOST \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Content-Type: application/json" \
+        --data "{\"tag_name\": \"v$RELEASE\"}" \
+        https://api.github.com/repos/cyrinux/vault-kv-search/releases
 )
-RELEASE_ID=$(echo "$OUTPUT" |jq -r '.id')
+RELEASE_ID=$(echo "$OUTPUT" | jq -r '.id')
 
 declare -a OSES=("linux" "darwin")
 for os in "${OSES[@]}"; do
@@ -40,12 +41,12 @@ for os in "${OSES[@]}"; do
         -H "Authorization: token $GITHUB_TOKEN" \
         -H "Content-Type: $(file -b --mime-type "$TAR_FILENAME")" \
         --data-binary @"$TAR_FILENAME" \
-        "https://uploads.github.com/repos/xbglowx/vault-kv-search/releases/$RELEASE_ID/assets?name=$TAR_FILENAME"
+        "https://uploads.github.com/repos/cyrinux/vault-kv-search/releases/$RELEASE_ID/assets?name=$TAR_FILENAME"
 done
 
-shasum -a 256 -- *.tar.gz > "$SHA256SUMS"
+sha256sum -- *.tar.gz > "$SHA256SUMS"
 curl -XPOST \
     -H "Authorization: token $GITHUB_TOKEN" \
     -H "Content-Type: $(file -b --mime-type "$TAR_FILENAME")" \
     --data-binary @"$SHA256SUMS" \
-    "https://uploads.github.com/repos/xbglowx/vault-kv-search/releases/$RELEASE_ID/assets?name=$SHA256SUMS"
+    "https://uploads.github.com/repos/cyrinux/vault-kv-search/releases/$RELEASE_ID/assets?name=$SHA256SUMS"
