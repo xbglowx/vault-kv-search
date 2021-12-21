@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "github.com/xbglowx/vault-kv-search/cmd"
+import "github.com/cyrinux/vault-kv-search/cmd"
 
 func main() {
 	cmd.Execute()
