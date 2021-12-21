@@ -36,6 +36,9 @@ func vaultKvSearch(args []string, searchObjects []string) {
 
 	fmt.Printf("Searching for substring '%s' against: %v\n", args[1], searchObjects)
 	startPath := strings.Replace(args[0], "/", "/metadata/", 1)
+	if ok := strings.HasSuffix(startPath, "/"); !ok {
+		startPath += "/"
+	}
 	fmt.Printf("StartPath: %s\n", startPath)
 
 	vc.readLeafs(startPath, searchObjects)
