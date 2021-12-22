@@ -29,7 +29,7 @@ func checkRequiredFlags(cmd *cobra.Command) error {
 	}
 
 	keys := []string{}
-	for key, _ := range searchObjectChoices {
+	for key := range searchObjectChoices {
 		keys = append(keys, key)
 	}
 
@@ -39,6 +39,7 @@ func checkRequiredFlags(cmd *cobra.Command) error {
 			return errors.New(errorMsg)
 		}
 	}
+
 	return nil
 }
 
@@ -53,10 +54,10 @@ Recursively search Hashicorp Vault for substring`,
 		return checkRequiredFlags(cmd)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		vaultKvSearch(args, searchObjects)
+		vaultKvSearch(args, searchObjects, showSecrets)
 	},
 	Args:    cobra.ExactArgs(2),
-	Example: "vault-kv-search secret/ foo",
+	Example: "vault-kv-search kv/ foo",
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -66,9 +67,11 @@ func Execute() {
 }
 
 var searchObjects []string
+var showSecrets bool
 
 func init() {
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().BoolP("help", "h", false, "Help message")
+	rootCmd.Flags().BoolVarP(&showSecrets, "showsecrets", "s", false, "Show secrets values")
 	rootCmd.Flags().StringSliceVar(&searchObjects, "search", []string{"value"}, "Which Vault objects to "+
 		"search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or "+
 		"once using format CSV. Defaults to 'value'")
