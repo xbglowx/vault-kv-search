@@ -14,13 +14,15 @@ import (
 type vaultClient struct {
 	logical       *vault.Logical
 	searchString  string
+	showSecrets   bool
 	searchObjects []string
 	wg            sync.WaitGroup
 }
 
-func vaultKvSearch(args []string, searchObjects []string) {
+func vaultKvSearch(args []string, searchObjects []string, showSecrets bool) {
 	config := vault.DefaultConfig()
 	config.Timeout = time.Second * 5
+	fmt.Printf("Args: %+v, Flags: %+v\n", args, showSecrets)
 
 	client, err := vault.NewClient(config)
 	if err != nil {
@@ -31,6 +33,7 @@ func vaultKvSearch(args []string, searchObjects []string) {
 		logical:       client.Logical(),
 		searchString:  args[1],
 		searchObjects: searchObjects,
+		showSecrets:   showSecrets, //pragma: allowlist secret
 		wg:            sync.WaitGroup{},
 	}
 
@@ -106,15 +109,27 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string) {
 					fullPath = strings.Replace(fullPath, "/data", "", 1)
 
 					if strings.Contains(dirEntry, vc.searchString) && searchObject == "path" {
-						fmt.Printf("Key match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+						if showSecrets {
+							fmt.Printf("Path match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+						} else {
+							fmt.Printf("Path match:\n\tSecret: %v\n\n", fullPath)
+						}
 					}
 
 					if strings.Contains(key, vc.searchString) && searchObject == "key" {
-						fmt.Printf("Key match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+						if showSecrets {
+							fmt.Printf("Key match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+						} else {
+							fmt.Printf("Key match:\n\tSecret: %v\n\n", fullPath)
+						}
 					}
 
 					if strings.Contains(valueStringType, vc.searchString) && searchObject == "value" {
-						fmt.Printf("Value match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+						if showSecrets {
+							fmt.Printf("Value match:\n\tSecret: %v\n\tKey: %v\n\tValue: %v\n", fullPath, key, value)
+						} else {
+							fmt.Printf("Value match:\n\tSecret: %v\n\n", fullPath)
+						}
 					}
 
 				}
