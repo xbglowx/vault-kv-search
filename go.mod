@@ -1,4 +1,4 @@
-module github.com/cyrinux/vault-kv-search
+module github.com/xbglowx/vault-kv-search
 
 go 1.17
 
