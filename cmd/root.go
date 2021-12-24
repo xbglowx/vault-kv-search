@@ -1,3 +1,5 @@
+package cmd
+
 /*
 Copyright © 2021 NAME HERE <EMAIL ADDRESS>
 
@@ -13,7 +15,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
 
 import (
 	"fmt"
@@ -23,53 +24,61 @@ import (
 
 func checkRequiredFlags(cmd *cobra.Command) error {
 	searchObjectChoices := map[string]struct{}{
-		"key" : {},
+		"key":   {},
 		"value": {},
+		"path":  {},
 	}
 
 	keys := []string{}
-	for key, _ := range searchObjectChoices {
+	for key := range searchObjectChoices {
 		keys = append(keys, key)
 	}
 
 	for _, s := range searchObjects {
-		if _, ok := searchObjectChoices[s]; ! ok {
+		if _, ok := searchObjectChoices[s]; !ok {
 			errorMsg := fmt.Sprintf("%s is not a valid flag choice. Choices are %v", s, keys)
 			return errors.New(errorMsg)
 		}
 	}
+
 	return nil
 }
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
+// RootCmd represents the base command when called without any subcommands
+var RootCmd = &cobra.Command{
 	Use:   "vault-kv-search [flags] search-path substring",
 	Short: "Search Hashicorp Vault",
 	Long: `Search for a substring in Hashicorp Vault
 
-Recursively search Hashicorp Vault for substring`,
+Recursively search Hashicorp Vault for substring
+Regex are supported`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return checkRequiredFlags(cmd)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		vaultKvSearch(args, searchObjects)
+		VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay)
 	},
 	Args:    cobra.ExactArgs(2),
-	Example: "vault-kv-search secret/ foo",
+	Example: "vault-kv-search kv/ foo",
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	cobra.CheckErr(rootCmd.Execute())
+	cobra.CheckErr(RootCmd.Execute())
 }
 
 var searchObjects []string
+var showSecrets bool
+var useRegex bool
+var crawlingDelay int
 
 func init() {
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.Flags().StringSliceVar(&searchObjects, "search", []string{"value"}, "Which Vault objects to "+
-		"search against. Choices are any and all of the following 'key,value'. Can be specified multiple times or "+
+	RootCmd.Flags().BoolVarP(&showSecrets, "showsecrets", "s", false, "Show secrets values")
+	RootCmd.Flags().BoolVarP(&useRegex, "regex", "r", false, "Enable searching regex substring")
+	RootCmd.Flags().IntVarP(&crawlingDelay, "delay", "d", 15, "Crawling delay in millisconds")
+	RootCmd.Flags().StringSliceVar(&searchObjects, "search", []string{"value"}, "Which Vault objects to "+
+		"search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or "+
 		"once using format CSV. Defaults to 'value'")
 
 }

@@ -18,4 +18,8 @@
 .idea
 *.iml
 
+/bin/
+/test/tests.*
+/test/coverage.*
+
 vault-kv-search
