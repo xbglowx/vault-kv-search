@@ -16,19 +16,26 @@ import (
 type vaultClient struct {
 	logical       *vault.Logical
 	sys           *vault.Sys
-	searchString  string
+	crawlingDelay int
+	jsonOutput    bool
 	showSecrets   bool
 	useRegex      bool
-	crawlingDelay int
 	searchObjects []string
+	searchString  string
 	wg            sync.WaitGroup
+}
+
+type secretMatched struct {
+	Search   string `json:"search"`
+	FullPath string `json:"path"`
+	Key      string `json:"key"`
+	Value    string `json:"value"`
 }
 
 func (vc *vaultClient) getKvVersion(path string) (int, error) {
 	mounts, err := vc.sys.ListMounts()
 	if err != nil {
-		err = fmt.Errorf("error while getting mounts: %w", err)
-		fmt.Println(err)
+		fmt.Println(fmt.Errorf("error while getting mounts: %w", err))
 		os.Exit(1)
 	}
 
@@ -36,7 +43,9 @@ func (vc *vaultClient) getKvVersion(path string) (int, error) {
 	for mount := range mounts {
 		if strings.Contains(mount, secret) {
 			version, _ := strconv.Atoi(mounts[mount].Options["version"])
-			fmt.Printf("Store path %q, version: %v\n", secret, version)
+			if !vc.jsonOutput {
+				fmt.Printf("Store path %q, version: %v\n", secret, version)
+			}
 			return version, nil
 		}
 	}
@@ -45,7 +54,7 @@ func (vc *vaultClient) getKvVersion(path string) (int, error) {
 }
 
 // VaultKvSearch is the main function
-func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int) {
+func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int, jsonOutput bool) {
 	config := vault.DefaultConfig()
 	config.Timeout = time.Second * 5
 
@@ -59,11 +68,12 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 	vc := vaultClient{
 		logical:       client.Logical(),
 		sys:           client.Sys(),
-		searchString:  args[1],
-		searchObjects: searchObjects,
-		showSecrets:   showSecrets, //pragma: allowlist secret
 		crawlingDelay: crawlingDelay,
+		jsonOutput:    jsonOutput,
+		showSecrets:   showSecrets, //pragma: allowlist secret
 		useRegex:      useRegex,
+		searchObjects: searchObjects,
+		searchString:  args[1],
 		wg:            sync.WaitGroup{},
 	}
 
@@ -74,8 +84,10 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 		os.Exit(1)
 	}
 
-	fmt.Printf("Searching for substring '%s' against: %v\n", args[1], searchObjects)
-	fmt.Printf("Start path: %s\n", startPath)
+	if !vc.jsonOutput {
+		fmt.Printf("Searching for substring '%s' against: %v\n", args[1], searchObjects)
+		fmt.Printf("Start path: %s\n", startPath)
+	}
 
 	if version > 1 {
 		startPath = strings.Replace(startPath, "/", "/metadata/", 1)
@@ -101,10 +113,26 @@ func (vc *vaultClient) secretMatch(dirEntry string, fullPath string, searchObjec
 	}
 
 	if found {
+		match := secretMatched{searchObject, fullPath, key, value}
+		vc.showMatch(match)
+	}
+}
+
+func (vc *vaultClient) showMatch(secret secretMatched) {
+	if vc.jsonOutput {
+		if !vc.showSecrets {
+			secret.Value = "obfuscated"
+		}
+		secretJSON, err := json.Marshal(secret)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "can't marshal JSON: %s\n", err)
+		}
+		fmt.Println(string(secretJSON))
+	} else {
 		if vc.showSecrets {
-			fmt.Printf("%s match:\n\tSecret: %s\n\tKey: %s\n\tValue: %s\n\n", strings.Title(searchObject), fullPath, key, value)
+			fmt.Printf("%s match:\n\tSecret: %s\n\tKey: %s\n\tValue: %s\n\n", strings.Title(secret.Search), secret.FullPath, secret.Key, secret.Value)
 		} else {
-			fmt.Printf("%s match:\n\tSecret: %s\n\tKey: %s\n\n", strings.Title(searchObject), fullPath, key)
+			fmt.Printf("%s match:\n\tSecret: %s\n\tKey: %s\n\n", strings.Title(secret.Search), secret.FullPath, secret.Key)
 		}
 	}
 }
@@ -145,24 +173,24 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 	pathList, err := vc.logical.List(path)
 
 	if err != nil {
-		fmt.Printf("Failed to list: %s\n%s", vc.searchString, err)
+		fmt.Fprintf(os.Stderr, "Failed to list: %s\n%s", vc.searchString, err)
 		os.Exit(1)
 	}
 
 	if pathList == nil {
-		fmt.Printf("%s is not a valid path\n", path)
+		fmt.Fprintf(os.Stderr, "%s is not a valid path\n", path)
 		os.Exit(1)
 	}
 
 	if len(pathList.Warnings) > 0 {
-		fmt.Println(pathList.Warnings[0])
+		fmt.Fprintf(os.Stderr, pathList.Warnings[0])
 		os.Exit(1)
 	}
 
 	for _, x := range pathList.Data["keys"].([]interface{}) {
 
 		// Slow down a little the crawling
-		time.Sleep(time.Duration(crawlingDelay) * time.Millisecond)
+		time.Sleep(time.Duration(vc.crawlingDelay) * time.Millisecond)
 
 		dirEntry := x.(string)
 		fullPath := fmt.Sprintf("%s%s", path, dirEntry)
