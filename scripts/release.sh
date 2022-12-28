@@ -13,14 +13,14 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-RELEASE=$1
-BUILD_DIR=$(mktemp -d)
-BINARY=vault-kv-search
-SHA256SUMS=sha256sums.txt
-GOARCH=amd64
-export GOARCH
-
 : "${GITHUB_TOKEN:?Need to set environment variable GITHUB_TOKEN}"
+
+ARCHS=("amd64" "arm64")
+BINARY=vault-kv-search
+BUILD_DIR=$(mktemp -d)
+OSES=("linux" "darwin" "windows")
+RELEASE=$1
+SHA256SUMS=sha256sums.txt
 
 OUTPUT=$(
     curl -s -XPOST \
@@ -29,19 +29,20 @@ OUTPUT=$(
         --data "{\"tag_name\": \"v$RELEASE\"}" \
         https://api.github.com/repos/xbglowx/vault-kv-search/releases
 )
+
 RELEASE_ID=$(echo "$OUTPUT" | jq -r '.id')
 
-declare -a OSES=("linux" "darwin" "windows")
 for os in "${OSES[@]}"; do
-    TAR_FILENAME="vault-kv-search-${RELEASE}.${os}-${GOARCH}.tar.gz"
-    export GOOS=$os
-    go build -o "$BUILD_DIR/$BINARY"
-    tar -czvf "$TAR_FILENAME" -C "$BUILD_DIR" "$BINARY"
-    curl -XPOST \
-        -H "Authorization: token $GITHUB_TOKEN" \
-        -H "Content-Type: $(file -b --mime-type "$TAR_FILENAME")" \
-        --data-binary @"$TAR_FILENAME" \
-        "https://uploads.github.com/repos/xbglowx/vault-kv-search/releases/$RELEASE_ID/assets?name=$TAR_FILENAME"
+    for arch in  "${ARCHS[@]}"; do
+        TAR_FILENAME="vault-kv-search-${RELEASE}.${os}-${arch}.tar.gz"
+        GOOS=$os GOARCH=$arch go build -o "$BUILD_DIR/$BINARY"
+        tar -czvf "$TAR_FILENAME" -C "$BUILD_DIR" "$BINARY"
+        curl -XPOST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: $(file -b --mime-type "$TAR_FILENAME")" \
+            --data-binary @"$TAR_FILENAME" \
+            "https://uploads.github.com/repos/xbglowx/vault-kv-search/releases/$RELEASE_ID/assets?name=$TAR_FILENAME"
+    done
 done
 
 sha256sum -- *.tar.gz > "$SHA256SUMS"
