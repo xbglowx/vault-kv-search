@@ -3,7 +3,7 @@ module github.com/xbglowx/vault-kv-search
 go 1.17
 
 require (
-	github.com/hashicorp/vault/api v1.8.2
+	github.com/hashicorp/vault/api v1.8.3
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.6.1
 )
@@ -31,7 +31,7 @@ require (
 	github.com/hashicorp/go-version v1.5.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/vault/sdk v0.6.0 // indirect
+	github.com/hashicorp/vault/sdk v0.7.0 // indirect
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
