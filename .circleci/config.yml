@@ -6,22 +6,16 @@ jobs:
   build:
     docker:
       # specify the version
-      - image: circleci/golang:1.17
+      - image: cimg/go:1.21.5
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
       # - image: circleci/postgres:9.4
 
-    #### TEMPLATE_NOTE: go expects specific checkout path representing url
-    #### expecting it in the form of
-    ####   /go/src/github.com/circleci/go-tool
-    ####   /go/src/bitbucket.org/circleci/go-tool
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
-
-      # specify any bash command here prefixed with `run: `
-      - run: go get -u golang.org/x/lint/golint && golint -set_exit_status
       - run: go get -v -t -d ./...
+      - run: golangci-lint run
+      - run: go build .
       #- run: go test -v ./...
