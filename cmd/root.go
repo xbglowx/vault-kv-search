@@ -18,6 +18,7 @@ limitations under the License.
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -56,7 +57,7 @@ Regex are supported`,
 		return checkRequiredFlags(cmd)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, jsonOutput)
+		VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput)
 	},
 	Args:    cobra.ExactArgs(2),
 	Example: "vault-kv-search kv/ foo",
@@ -68,19 +69,22 @@ func Execute() {
 	cobra.CheckErr(RootCmd.Execute())
 }
 
-var crawlingDelay int
-var jsonOutput bool
-var showSecrets bool
-var useRegex bool
-var searchObjects []string
+var (
+	crawlingDelay int
+	kvVersion     int
+	jsonOutput    bool
+	showSecrets   bool
+	useRegex      bool
+	searchObjects []string
+)
 
 func init() {
 	RootCmd.Flags().IntVarP(&crawlingDelay, "delay", "d", 15, "Crawling delay in millisconds")
+	RootCmd.Flags().IntVarP(&kvVersion, "kv-version", "k", 0, "KV version (1,2). Autodetect if not defined")
 	RootCmd.Flags().BoolVarP(&jsonOutput, "json", "j", false, "Output as JSON")
 	RootCmd.Flags().BoolVarP(&showSecrets, "showsecrets", "s", false, "Show secrets values")
 	RootCmd.Flags().BoolVarP(&useRegex, "regex", "r", false, "Enable searching regex substring")
 	RootCmd.Flags().StringSliceVar(&searchObjects, "search", []string{"value"}, "Which Vault objects to "+
 		"search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or "+
 		"once using format CSV. Defaults to 'value'")
-
 }
