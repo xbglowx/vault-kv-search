@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	vault "github.com/hashicorp/vault/api"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	vault "github.com/hashicorp/vault/api"
 )
 
 type vaultClient struct {
@@ -54,7 +55,7 @@ func (vc *vaultClient) getKvVersion(path string) (int, error) {
 }
 
 // VaultKvSearch is the main function
-func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int, jsonOutput bool) {
+func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int, version int, jsonOutput bool) {
 	config := vault.DefaultConfig()
 	config.Timeout = time.Second * 5
 
@@ -70,7 +71,7 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 		sys:           client.Sys(),
 		crawlingDelay: crawlingDelay,
 		jsonOutput:    jsonOutput,
-		showSecrets:   showSecrets, //pragma: allowlist secret
+		showSecrets:   showSecrets, // pragma: allowlist secret
 		useRegex:      useRegex,
 		searchObjects: searchObjects,
 		searchString:  args[1],
@@ -78,10 +79,13 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 	}
 
 	startPath := args[0]
-	version, err := vc.getKvVersion(startPath)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+
+	if version == 0 {
+		version, err = vc.getKvVersion(startPath)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 
 	if !vc.jsonOutput {
@@ -171,7 +175,6 @@ func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEn
 
 func (vc *vaultClient) readLeafs(path string, searchObjects []string, version int) {
 	pathList, err := vc.logical.List(path)
-
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to list: %s\n%s", vc.searchString, err)
 		os.Exit(1)
