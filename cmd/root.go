@@ -1,7 +1,7 @@
 package cmd
 
 /*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright © 2024 Brian Glogower <xbglowx@gmail.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func checkRequiredFlags(cmd *cobra.Command) error {
+func checkInputs(cmd *cobra.Command, args []string) error {
 	searchObjectChoices := map[string]struct{}{
 		"key":   {},
 		"value": {},
@@ -42,24 +42,29 @@ func checkRequiredFlags(cmd *cobra.Command) error {
 		}
 	}
 
+	if len(args) == 1 {
+		cmd.Printf("!!Warning!! searching all KV stores, since only one positional argument was specified\n")
+	}
+
 	return nil
 }
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "vault-kv-search [flags] search-path substring",
+	Use:   "vault-kv-search [flags] [search-path] substring",
 	Short: "Search Hashicorp Vault",
-	Long: `Search for a substring in Hashicorp Vault
+	Long: `Recursively search Hashicorp Vault for substring
 
-Recursively search Hashicorp Vault for substring
-Regex are supported`,
+If only one postional argument is given, it is assumed you want to search all 
+available KV stores and the argument specified is the substring you want to search for`,
+
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		return checkRequiredFlags(cmd)
+		return checkInputs(cmd, args)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput)
 	},
-	Args:    cobra.ExactArgs(2),
+	Args:    cobra.RangeArgs(1, 2),
 	Example: "vault-kv-search kv/ foo",
 }
 
@@ -71,20 +76,20 @@ func Execute() {
 
 var (
 	crawlingDelay int
-	kvVersion     int
 	jsonOutput    bool
+	kvVersion     int
+	searchObjects []string
 	showSecrets   bool
 	useRegex      bool
-	searchObjects []string
 )
 
 func init() {
 	RootCmd.Flags().IntVarP(&crawlingDelay, "delay", "d", 15, "Crawling delay in millisconds")
-	RootCmd.Flags().IntVarP(&kvVersion, "kv-version", "k", 0, "KV version (1,2). Autodetect if not defined")
 	RootCmd.Flags().BoolVarP(&jsonOutput, "json", "j", false, "Output as JSON")
-	RootCmd.Flags().BoolVarP(&showSecrets, "showsecrets", "s", false, "Show secrets values")
-	RootCmd.Flags().BoolVarP(&useRegex, "regex", "r", false, "Enable searching regex substring")
+	RootCmd.Flags().IntVarP(&kvVersion, "kv-version", "k", 0, "KV version (1,2). Autodetect if not defined")
 	RootCmd.Flags().StringSliceVar(&searchObjects, "search", []string{"value"}, "Which Vault objects to "+
 		"search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or "+
 		"once using format CSV. Defaults to 'value'")
+	RootCmd.Flags().BoolVarP(&showSecrets, "showsecrets", "s", false, "Show secrets values")
+	RootCmd.Flags().BoolVarP(&useRegex, "regex", "r", false, "Enable searching regex substring")
 }
