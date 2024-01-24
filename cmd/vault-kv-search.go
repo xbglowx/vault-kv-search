@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -15,14 +16,14 @@ import (
 )
 
 type vaultClient struct {
-	logical       *vault.Logical
-	sys           *vault.Sys
 	crawlingDelay int
 	jsonOutput    bool
-	showSecrets   bool
-	useRegex      bool
+	logical       *vault.Logical
 	searchObjects []string
 	searchString  string
+	showSecrets   bool
+	sys           *vault.Sys
+	useRegex      bool
 	wg            sync.WaitGroup
 }
 
@@ -36,8 +37,7 @@ type secretMatched struct {
 func (vc *vaultClient) getKvVersion(path string) (int, error) {
 	mounts, err := vc.sys.ListMounts()
 	if err != nil {
-		fmt.Println(fmt.Errorf("error while getting mounts: %w", err))
-		os.Exit(1)
+		return 0, fmt.Errorf("error while listing mounts: %w", err)
 	}
 
 	secret := strings.Split(path, "/")[0]
@@ -66,43 +66,85 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 		os.Exit(1)
 	}
 
+	// If length of postional args is 1, the users didn't specify a search-path and wants to search all available KV stores.
+	var searchString string
+	var searchAllKvStores bool
+	if len(args) == 1 {
+		searchAllKvStores = true
+		searchString = args[0]
+	} else {
+		searchAllKvStores = false
+		searchString = args[1]
+	}
+
 	vc := vaultClient{
-		logical:       client.Logical(),
-		sys:           client.Sys(),
 		crawlingDelay: crawlingDelay,
 		jsonOutput:    jsonOutput,
-		showSecrets:   showSecrets, // pragma: allowlist secret
-		useRegex:      useRegex,
+		logical:       client.Logical(),
 		searchObjects: searchObjects,
-		searchString:  args[1],
+		searchString:  searchString,
+		showSecrets:   showSecrets, // pragma: allowlist secret
+		sys:           client.Sys(),
+		useRegex:      useRegex,
 		wg:            sync.WaitGroup{},
 	}
 
-	startPath := args[0]
+	var startPaths []string
+	if searchAllKvStores {
+		// fmt.Fprintf(os.Stderr, "!!Warning!! search all KV stores was selected. Ignoring first positional argument search-path\n")
+		// fmt.Fprintf(os.Stderr, "!!Warning!! searching all KV stores, since first positional argument search-path was not specified\n")
+		startPaths = vc.getAllKvStores()
+	} else {
+		startPaths = append(startPaths, args[0])
+	}
 
-	if version == 0 {
-		version, err = vc.getKvVersion(startPath)
+	for _, startPath := range startPaths {
+		if version == 0 {
+			version, err = vc.getKvVersion(startPath)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		}
+
+		if !vc.jsonOutput {
+			fmt.Printf("Searching for substring '%s' against: %v\n", startPath, searchObjects)
+			fmt.Printf("Start path: %s\n", startPath)
+		}
+
+		if version > 1 {
+			startPath = strings.Replace(startPath, "/", "/metadata/", 1)
+		}
+
+		if ok := strings.HasSuffix(startPath, "/"); !ok {
+			startPath += "/"
+		}
+		err := vc.readLeafs(startPath, searchObjects, version)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(err.Error())
 			os.Exit(1)
+		}
+		vc.wg.Wait()
+	}
+}
+
+func (vc *vaultClient) getAllKvStores() []string {
+	var startPaths []string
+
+	mountPoints, err := vc.sys.ListMounts()
+	if err != nil {
+		log.Fatalf("Could not get a list of mounts: %v", err)
+	}
+
+	// Loop through all mountpoints and save only those that are of type=kv
+	for mountPath, mountOptions := range mountPoints {
+		if mountOptions.Type == "kv" || mountOptions.Type == "generic" {
+			startPaths = append(startPaths, mountPath)
+
 		}
 	}
 
-	if !vc.jsonOutput {
-		fmt.Printf("Searching for substring '%s' against: %v\n", args[1], searchObjects)
-		fmt.Printf("Start path: %s\n", startPath)
-	}
-
-	if version > 1 {
-		startPath = strings.Replace(startPath, "/", "/metadata/", 1)
-	}
-
-	if ok := strings.HasSuffix(startPath, "/"); !ok {
-		startPath += "/"
-	}
-
-	vc.readLeafs(startPath, searchObjects, version)
-	vc.wg.Wait()
+	return startPaths
 }
 
 func (vc *vaultClient) secretMatch(dirEntry string, fullPath string, searchObject string, key string, value string) {
@@ -173,25 +215,22 @@ func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEn
 	return key, valueStringType
 }
 
-func (vc *vaultClient) readLeafs(path string, searchObjects []string, version int) {
+func (vc *vaultClient) readLeafs(path string, searchObjects []string, version int) error {
 	pathList, err := vc.logical.List(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to list: %s\n%s", vc.searchString, err)
-		os.Exit(1)
+		return fmt.Errorf("failed to list: %s\n%s", vc.searchString, err)
 	}
 
 	if pathList == nil {
-		fmt.Fprintf(os.Stderr, "%s is not a valid path\n", path)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "!!Warning!! search-path %s doesn't have any contents. Skipping.\n", path)
+		return nil
 	}
 
 	if len(pathList.Warnings) > 0 {
-		fmt.Fprintf(os.Stderr, pathList.Warnings[0])
-		os.Exit(1)
+		return fmt.Errorf(pathList.Warnings[0])
 	}
 
 	for _, x := range pathList.Data["keys"].([]interface{}) {
-
 		// Slow down a little the crawling
 		time.Sleep(time.Duration(vc.crawlingDelay) * time.Millisecond)
 
@@ -223,4 +262,5 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 			}
 		}
 	}
+	return nil
 }
