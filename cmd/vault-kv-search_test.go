@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -93,14 +94,24 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 
 	sysClient := client.Sys()
 
-	mountPoints := []string{"test0", "test1", "test2"}
-	mountPointOptions := api.MountInput{
+	// Create additional logical secret mountpoints for KV type KVv2
+	mountPointsKv := []string{"test0-kv", "test1-kv", "test2-kv"}
+	mountPointOptionsKv := api.MountInput{
 		Type: "kv",
 	}
 
-	// Create additional logical secret mountpoints
-	for _, mount := range mountPoints {
-		sysClient.Mount(mount, &mountPointOptions)
+	for _, mount := range mountPointsKv {
+		sysClient.Mount(mount, &mountPointOptionsKv)
+	}
+
+	// Create additional logical secret mountpoints for Generic type KVv1
+	mountPointsGeneric := []string{"test0-generic", "test1-generic", "test2-generic"}
+	mountPointOptionsGeneric := api.MountInput{
+		Type: "generic",
+	}
+
+	for _, mount := range mountPointsGeneric {
+		sysClient.Mount(mount, &mountPointOptionsGeneric)
 	}
 
 	testData := []struct {
@@ -108,9 +119,12 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 		key   string
 		value string
 	}{
-		{"test0/data/test0", "key0", "data0"},
-		{"test1/data/test1", "key1", "data0"},
-		{"test2/data/test2", "key2", "data2"},
+		{"test0-kv/data/test0", "key0", "data0"},
+		{"test1-kv/data/test1", "key1", "data0"},
+		{"test2-kv/data/test2", "key2", "data2"},
+		{"test0-generic/data/test0", "key0", "data0"},
+		{"test1-generic/data/test1", "key1", "data0"},
+		{"test2-generic/data/test2", "key2", "data2"},
 	}
 
 	// Create some test data
@@ -146,9 +160,21 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(r)
 
-	// Validate the stdout output
-	expectedOutput := fmt.Sprintf("%v%v", `{"search":"value","path":"test0/data/test0","key":"key0","value":"obfuscated"}`, `{"search":"value","path":"test1/data/test1","key":"key1","value":"obfuscated"}`)
-	actualOutput := strings.ReplaceAll(buf.String(), "\n", "")
+	// Create a slice and sort it, so that we can better compares expected vs actual.
+	// The output ordering can change between runs, since we are using wait groups
+	s := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	slices.Sort(s)
+	actualOutput := strings.Join(s, ",")
+
+	// Set expected output
+	expectedOutput := fmt.Sprintf("%v,%v,%v,%v",
+		`{"search":"value","path":"test0-generic/data/test0","key":"key0","value":"obfuscated"}`,
+		`{"search":"value","path":"test0-kv/data/test0","key":"key0","value":"obfuscated"}`,
+		`{"search":"value","path":"test1-generic/data/test1","key":"key1","value":"obfuscated"}`,
+		`{"search":"value","path":"test1-kv/data/test1","key":"key1","value":"obfuscated"}`,
+	)
+
+	// Validate actual matches expected
 	if actualOutput != expectedOutput {
 		t.Errorf("Expected output '%s', but got '%s'", expectedOutput, actualOutput)
 	}

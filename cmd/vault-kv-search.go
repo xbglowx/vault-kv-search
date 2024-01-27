@@ -91,8 +91,6 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 
 	var startPaths []string
 	if searchAllKvStores {
-		// fmt.Fprintf(os.Stderr, "!!Warning!! search all KV stores was selected. Ignoring first positional argument search-path\n")
-		// fmt.Fprintf(os.Stderr, "!!Warning!! searching all KV stores, since first positional argument search-path was not specified\n")
 		startPaths = vc.getAllKvStores()
 	} else {
 		startPaths = append(startPaths, args[0])
@@ -136,7 +134,7 @@ func (vc *vaultClient) getAllKvStores() []string {
 		log.Fatalf("Could not get a list of mounts: %v", err)
 	}
 
-	// Loop through all mountpoints and save only those that are of type=kv
+	// Loop through all mountpoints and save only those that are of types kv or generic (old vault KVv1)
 	for mountPath, mountOptions := range mountPoints {
 		if mountOptions.Type == "kv" || mountOptions.Type == "generic" {
 			startPaths = append(startPaths, mountPath)
