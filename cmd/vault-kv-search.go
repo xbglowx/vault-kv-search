@@ -27,6 +27,11 @@ type vaultClient struct {
 	wg            sync.WaitGroup
 }
 
+type startPathInfo struct {
+	path      string
+	kvVersion int
+}
+
 type secretMatched struct {
 	Search   string `json:"search"`
 	FullPath string `json:"path"`
@@ -55,7 +60,7 @@ func (vc *vaultClient) getKvVersion(path string) (int, error) {
 }
 
 // VaultKvSearch is the main function
-func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int, version int, jsonOutput bool) {
+func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int, kvVersion int, jsonOutput bool) {
 	config := vault.DefaultConfig()
 	config.Timeout = time.Second * 5
 
@@ -89,35 +94,36 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 		wg:            sync.WaitGroup{},
 	}
 
-	var startPaths []string
+	var startPathsInfo []startPathInfo
 	if searchAllKvStores {
-		startPaths = vc.getAllKvStores()
+		startPathsInfo = vc.getAllKvStores()
 	} else {
-		startPaths = append(startPaths, args[0])
-	}
-
-	for _, startPath := range startPaths {
-		if version == 0 {
-			version, err = vc.getKvVersion(startPath)
+		if kvVersion == 0 {
+			kvVersion, err = vc.getKvVersion(args[0])
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
 		}
+		startPathsInfo = append(startPathsInfo, startPathInfo{path: args[0], kvVersion: kvVersion})
+	}
 
+	for _, startPathInfo := range startPathsInfo {
 		if !vc.jsonOutput {
-			fmt.Printf("Searching for substring '%s' against: %v\n", startPath, searchObjects)
-			fmt.Printf("Start path: %s\n", startPath)
+			fmt.Printf("Searching for substring '%s' against: %v\n", searchString, searchObjects)
+			fmt.Printf("Start path: %s\n", startPathInfo.path)
 		}
 
-		if version > 1 {
-			startPath = strings.Replace(startPath, "/", "/metadata/", 1)
+		// In case the user leaves off the trailing /, let's add it for them
+		if ok := strings.HasSuffix(startPathInfo.path, "/"); !ok {
+			startPathInfo.path += "/"
 		}
 
-		if ok := strings.HasSuffix(startPath, "/"); !ok {
-			startPath += "/"
+		if startPathInfo.kvVersion > 1 {
+			startPathInfo.path = strings.Replace(startPathInfo.path, "/", "/metadata/", 1)
 		}
-		err := vc.readLeafs(startPath, searchObjects, version)
+
+		err := vc.readLeafs(startPathInfo.path, searchObjects, startPathInfo.kvVersion)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
@@ -126,8 +132,8 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 	}
 }
 
-func (vc *vaultClient) getAllKvStores() []string {
-	var startPaths []string
+func (vc *vaultClient) getAllKvStores() []startPathInfo {
+	var info []startPathInfo
 
 	mountPoints, err := vc.sys.ListMounts()
 	if err != nil {
@@ -137,12 +143,12 @@ func (vc *vaultClient) getAllKvStores() []string {
 	// Loop through all mountpoints and save only those that are of types kv or generic (old vault KVv1)
 	for mountPath, mountOptions := range mountPoints {
 		if mountOptions.Type == "kv" || mountOptions.Type == "generic" {
-			startPaths = append(startPaths, mountPath)
-
+			version, _ := strconv.Atoi(mountOptions.Options["version"])
+			info = append(info, startPathInfo{path: mountPath, kvVersion: version})
 		}
 	}
 
-	return startPaths
+	return info
 }
 
 func (vc *vaultClient) secretMatch(dirEntry string, fullPath string, searchObject string, key string, value string) {
