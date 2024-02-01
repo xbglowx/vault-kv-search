@@ -3,23 +3,18 @@ package cmd
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/builtin/logical/database"
-	"github.com/hashicorp/vault/builtin/logical/pki"
-	"github.com/hashicorp/vault/builtin/logical/transit"
-	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
 )
 
@@ -38,21 +33,10 @@ func testVaultServerUnseal(t *testing.T) (*api.Client, []string, func()) {
 	t.Helper()
 
 	return testVaultServerCoreConfig(t, &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": credUserpass.Factory,
-		},
-		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
-		},
 		LogicalBackends: map[string]logical.Factory{
-			"database":       database.Factory,
-			"generic-leased": vault.LeasedPassthroughBackendFactory,
-			"pki":            pki.Factory,
-			"transit":        transit.Factory,
+			"kv":    kv.Factory,
+			"kv-v2": kv.VersionedKVFactory,
 		},
-		BuiltinRegistry: builtinplugins.Registry,
 		Logger: hclog.New(&hclog.LoggerOptions{
 			Level: hclog.Off,
 		}),
@@ -93,50 +77,52 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 
 	sysClient := client.Sys()
 
+	// Create additional logical secret mountpoints for type KVv1
+	mountInputKv1 := &api.MountInput{
+		Type: "kv-v1",
+	}
+	sysClient.Mount("test-kv1", mountInputKv1)
+
 	// Create additional logical secret mountpoints for KV type KVv2
-	mountPointsKv2 := []string{"test0-kv2", "test1-kv2", "test2-kv2"}
-	mountPointOptionsKv2 := api.MountInput{
-		Type: "kv",
-		Options: map[string]string{
-			Version: "2",
-		},
+	mountInputKv2 := &api.MountInput{
+		Type: "kv-v2",
 	}
+	sysClient.Mount("test-kv2", mountInputKv2)
 
-	for _, mount := range mountPointsKv2 {
-		sysClient.Mount(mount, &mountPointOptionsKv2)
-	}
+	logical := client.Logical()
 
-	// Create additional logical secret mountpoints for Generic type KVv1
-	mountPointsKv1 := []string{"test0-kv1", "test1-kv1", "test2-kv1"}
-	mountPointOptionsKv1 := api.MountInput{
-		Type: "kv",
-		Options: map[string]string{
-			Version: "1",
-		},
-	}
-
-	for _, mount := range mountPointsKv1 {
-		sysClient.Mount(mount, &mountPointOptionsKv1)
-	}
-
-	testData := []struct {
+	// Write KVv1 test data to vault
+	testDataKv1 := []struct {
 		path  string
 		key   string
 		value string
 	}{
-		{"test0-kv1/data/test0", "key0", "data0"},
-		{"test1-kv1/data/test1", "key1", "data0"},
-		{"test2-kv1/data/test2", "key2", "data2"},
-		{"test0-kv2/data/test0", "key0", "data0"},
-		{"test1-kv2/data/test1", "key1", "data0"},
-		{"test2-kv2/data/test2", "key2", "data2"},
+		{"test-kv1/test1", "key1", "data1"},
+		{"test-kv1/dir1/test1", "key1", "data1"},
 	}
 
-	// Create some test data
-	for _, v := range testData {
-		logical := client.Logical()
+	for _, v := range testDataKv1 {
 		data := map[string]interface{}{
 			v.key: v.value,
+		}
+		logical.Write(v.path, data)
+	}
+
+	// Write KVv2 test data to vault
+	testDataKv2 := []struct {
+		path  string
+		key   string
+		value string
+	}{
+		{"test-kv2/data/test1", "key1", "data1"},
+		{"test-kv2/data/dir1/test1", "key1", "data1"},
+	}
+
+	for _, v := range testDataKv2 {
+		data := map[string]interface{}{
+			"data": map[string]interface{}{
+				v.key: v.value,
+			},
 		}
 		logical.Write(v.path, data)
 	}
@@ -145,20 +131,21 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	args := []string{"data0"}
+	args := []string{"data1"}
+	crawlingDelay := 15
+	jsonOutput := true
+	kvVersion := 0
 	searchObjects := []string{"value"}
 	showSecrets := false
 	useRegex := false
-	crawlingDelay := 15
-	version := 0
-	jsonOutput := true
 
+	// Configure the vault client
 	os.Setenv("VAULT_TOKEN", client.Token())
 	os.Setenv("VAULT_ADDR", client.Address())
 	os.Setenv("VAULT_SKIP_VERIFY", "true")
 
 	// Call the function you want to test
-	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, version, jsonOutput)
+	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput)
 
 	// Read from the buffer to get the stdout output
 	w.Close()
@@ -170,18 +157,17 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 	s := strings.Split(strings.TrimSpace(buf.String()), "\n")
 	slices.Sort(s)
 	actualOutput := strings.Join(s, ",")
-	t.Log(actualOutput)
 
 	// Set expected output
-	// expectedOutput := fmt.Sprintf("%v,%v,%v,%v",
-	// `{"search":"value","path":"test0-generic/data/test0","key":"key0","value":"obfuscated"}`,
-	// `{"search":"value","path":"test0-kv/data/test0","key":"key0","value":"obfuscated"}`,
-	// `{"search":"value","path":"test1-generic/data/test1","key":"key1","value":"obfuscated"}`,
-	// `{"search":"value","path":"test1-kv/data/test1","key":"key1","value":"obfuscated"}`,
-	// )
+	expectedOutput := fmt.Sprintf("%v,%v,%v,%v",
+		`{"search":"value","path":"test-kv1/dir1/test1","key":"key1","value":"obfuscated"}`,
+		`{"search":"value","path":"test-kv1/test1","key":"key1","value":"obfuscated"}`,
+		`{"search":"value","path":"test-kv2/dir1/test1","key":"key1","value":"obfuscated"}`,
+		`{"search":"value","path":"test-kv2/test1","key":"key1","value":"obfuscated"}`,
+	)
 
 	// Validate actual matches expected
-	// if actualOutput != expectedOutput {
-	// t.Errorf("Expected output '%s', but got '%s'", expectedOutput, actualOutput)
-	// }
+	if actualOutput != expectedOutput {
+		t.Errorf("Expected output '%s', but got '%s'", expectedOutput, actualOutput)
+	}
 }

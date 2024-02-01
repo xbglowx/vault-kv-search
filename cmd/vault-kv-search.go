@@ -109,14 +109,14 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 	}
 
 	for _, startPathInfo := range startPathsInfo {
-		if !vc.jsonOutput {
-			fmt.Printf("Searching for substring '%s' against: %v\n", searchString, searchObjects)
-			fmt.Printf("Start path: %s\n", startPathInfo.path)
-		}
-
 		// In case the user leaves off the trailing /, let's add it for them
 		if ok := strings.HasSuffix(startPathInfo.path, "/"); !ok {
 			startPathInfo.path += "/"
+		}
+
+		if !vc.jsonOutput {
+			fmt.Printf("Searching for substring '%s' against: %v\n", searchString, searchObjects)
+			fmt.Printf("Start path: %s\n", startPathInfo.path)
 		}
 
 		if startPathInfo.kvVersion > 1 {
@@ -220,6 +220,7 @@ func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEn
 }
 
 func (vc *vaultClient) readLeafs(path string, searchObjects []string, version int) error {
+	// fmt.Println("oh no: ", path, version)
 	pathList, err := vc.logical.List(path)
 	if err != nil {
 		return fmt.Errorf("failed to list: %s\n%s", vc.searchString, err)
