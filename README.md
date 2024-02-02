@@ -1,4 +1,4 @@
-# vault-kv-search [![CircleCI](https://circleci.com/gh/xbglowx/vault-kv-search.svg?style=svg)](https://circleci.com/gh/xbglowx/vault-kv-search)
+# vault-kv-search [![Github Actions](https://github.com/xbglowx/vault-kv-search/actions/workflows/go.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/go.yml)
 
 This tool is compatible with secrets kv v1 and v2.
 
