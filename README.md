@@ -31,4 +31,8 @@ This tool is compatible with secrets kv v1 and v2.
 
   `> vault-kv-search --search=path secret/ sshkeys`
 
+- Search all mounted KV secret engines. Since this requires listing all mounts, the operator must have proper permissions to do so.
+
+  `> vault-kv-search example.com`
+
 - To display the secrets, and not only the vault path, use the `--showsecrets` parameter.
