@@ -1,4 +1,4 @@
-# vault-kv-search [![Github Actions](https://github.com/xbglowx/vault-kv-search/actions/workflows/go.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/go.yml)
+# vault-kv-search [![Build and Test](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml) [![CodeQL](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml) [![golangci-lint](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml)
 
 This tool is compatible with secrets kv v1 and v2.
 
