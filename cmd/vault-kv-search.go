@@ -223,7 +223,6 @@ func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEn
 }
 
 func (vc *vaultClient) readLeafs(path string, searchObjects []string, version int) error {
-	// fmt.Println("oh no: ", path, version)
 	pathList, err := vc.logical.List(path)
 	if err != nil {
 		return fmt.Errorf("failed to list: %s\n%s", vc.searchString, err)
@@ -248,7 +247,11 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 			vc.wg.Add(1)
 			go func() {
 				defer vc.wg.Done()
-				vc.readLeafs(fullPath, searchObjects, version)
+				err := vc.readLeafs(fullPath, searchObjects, version)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
 			}()
 
 		} else {

@@ -81,13 +81,19 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 	mountInputKv1 := &api.MountInput{
 		Type: "kv-v1",
 	}
-	sysClient.Mount("test-kv1", mountInputKv1)
+	err := sysClient.Mount("test-kv1", mountInputKv1)
+	if err != nil {
+		t.Log("Failed to mount test-kv1: ", err)
+	}
 
 	// Create additional logical secret mountpoints for KV type KVv2
 	mountInputKv2 := &api.MountInput{
 		Type: "kv-v2",
 	}
-	sysClient.Mount("test-kv2", mountInputKv2)
+	err = sysClient.Mount("test-kv2", mountInputKv2)
+	if err != nil {
+		t.Log("Failed to mount test-kv2 mount: ", err)
+	}
 
 	logical := client.Logical()
 
@@ -105,7 +111,10 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 		data := map[string]interface{}{
 			v.key: v.value,
 		}
-		logical.Write(v.path, data)
+		_, err := logical.Write(v.path, data)
+		if err != nil {
+			t.Log("Failed to write test data to KVv1: ", err)
+		}
 	}
 
 	// Write KVv2 test data to vault
@@ -124,7 +133,10 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 				v.key: v.value,
 			},
 		}
-		logical.Write(v.path, data)
+		_, err := logical.Write(v.path, data)
+		if err != nil {
+			t.Log("Failed to write test data to KVv2: ", err)
+		}
 	}
 
 	// Redirect stdout to a buffer
