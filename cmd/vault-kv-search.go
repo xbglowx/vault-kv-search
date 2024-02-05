@@ -13,6 +13,8 @@ import (
 	"time"
 
 	vault "github.com/hashicorp/vault/api"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type vaultClient struct {
@@ -179,10 +181,11 @@ func (vc *vaultClient) showMatch(secret secretMatched) {
 		}
 		fmt.Println(string(secretJSON))
 	} else {
+		title := cases.Title(language.English)
 		if vc.showSecrets {
-			fmt.Printf("%s match:\n\tSecret: %s\n\tKey: %s\n\tValue: %s\n\n", strings.Title(secret.Search), secret.FullPath, secret.Key, secret.Value)
+			fmt.Printf("%s match:\n\tSecret: %s\n\tKey: %s\n\tValue: %s\n\n", title.String(secret.Search), secret.FullPath, secret.Key, secret.Value)
 		} else {
-			fmt.Printf("%s match:\n\tSecret: %s\n\tKey: %s\n\n", strings.Title(secret.Search), secret.FullPath, secret.Key)
+			fmt.Printf("%s match:\n\tSecret: %s\n\tKey: %s\n\n", title.String(secret.Search), secret.FullPath, secret.Key)
 		}
 	}
 }
