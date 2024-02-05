@@ -12,6 +12,7 @@ require (
 	github.com/hashicorp/vault/sdk v0.10.2
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.0
+	golang.org/x/text v0.14.0
 )
 
 require (
@@ -235,7 +236,6 @@ require (
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.10.0 // indirect
 	google.golang.org/api v0.138.0 // indirect
