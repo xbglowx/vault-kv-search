@@ -55,7 +55,7 @@ jobs:
         shasum -a 256 vault-kv-search-* > sha256sums.txt
 
     - name: Create Release and Upload Assets
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         draft: false
         prerelease: false
