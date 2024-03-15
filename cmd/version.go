@@ -1,17 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
-)
-
-var (
-	// Version contains the current version.
-	Version = "dev"
-	// BuildDate contains a string with the build date.
-	BuildDate = "unknown"
 )
 
 func init() {
@@ -23,8 +19,47 @@ var versionCmd = &cobra.Command{
 	Short: "Print version",
 	Long:  `Display version and build information about vault-kv-search.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("vault-kv-search %s\n", Version)
-		fmt.Printf("  Build date: %s\n", BuildDate)
-		fmt.Printf("  Built with: %s\n", runtime.Version())
+		fmt.Println(buildInfo())
 	},
+}
+
+var (
+	Version   = "unknown"
+	Revision  = "unknown"
+	Branch    = "unknown"
+	BuildUser = "unknown"
+	BuildDate = "unknown"
+	GoVersion = runtime.Version()
+	GoOS      = runtime.GOOS
+	GoArch    = runtime.GOARCH
+	Platform  = GoOS + "/" + GoArch
+)
+
+var versionInfoTmpl = `
+version:    {{.version}}
+  branch:   {{.branch}}
+  revision: {{.revision}})
+build user: {{.buildUser}}
+build date: {{.buildDate}}
+go version: {{.goVersion}}
+platform:   {{.platform}}
+`
+
+func buildInfo() string {
+	m := map[string]string{
+		"version":   Version,
+		"revision":  Revision,
+		"branch":    Branch,
+		"buildUser": BuildUser,
+		"buildDate": BuildDate,
+		"goVersion": GoVersion,
+		"platform":  GoOS + "/" + GoArch,
+	}
+	t := template.Must(template.New("version").Parse(versionInfoTmpl))
+
+	var buf bytes.Buffer
+	if err := t.ExecuteTemplate(&buf, "version", m); err != nil {
+		panic(err)
+	}
+	return strings.TrimSpace(buf.String())
 }
