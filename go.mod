@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/go-hclog v1.6.2
 	github.com/hashicorp/vault v1.15.3
 	github.com/hashicorp/vault-plugin-secrets-kv v0.17.0
-	github.com/hashicorp/vault/api v1.12.1
+	github.com/hashicorp/vault/api v1.12.2
 	github.com/hashicorp/vault/sdk v0.10.2
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.0
