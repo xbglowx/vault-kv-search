@@ -160,8 +160,14 @@ func (vc *vaultClient) secretMatch(dirEntry string, fullPath string, searchObjec
 
 	if vc.useRegex {
 		found, _ = regexp.MatchString(vc.searchString, term)
+		if !found && searchObject == "path" {
+			found, _ = regexp.MatchString(vc.searchString, fullPath)
+		}
 	} else {
 		found = strings.Contains(term, vc.searchString)
+		if !found && searchObject == "path" {
+			found = strings.Contains(fullPath, vc.searchString)
+		}
 	}
 
 	if found {
