@@ -273,7 +273,7 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 
 			for _, searchObject := range searchObjects {
 				if version > 1 {
-					fullPath = strings.Replace(fullPath, "/data", "", 1)
+					fullPath = strings.Replace(fullPath, "/data/", "/", 1)
 				}
 				vc.digDeeper(version, secretInfo.Data, dirEntry, fullPath, searchObject)
 			}
