@@ -744,6 +744,8 @@ github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+l
 github.com/hashicorp/go-multierror v1.1.1/go.mod h1:iw975J/qwKPdAO1clOe2L8331t/9/fmwbPZ6JB6eMoM=
 github.com/hashicorp/go-plugin v1.5.2 h1:aWv8eimFqWlsEiMrYZdPYl+FdHaBJSN4AWwGWfT1G2Y=
 github.com/hashicorp/go-plugin v1.5.2/go.mod h1:w1sAEES3g3PuV/RzUrgow20W2uErMly84hhD3um1WL4=
+github.com/hashicorp/go-plugin v1.6.0 h1:wgd4KxHJTVGGqWBq4QPB1i5BZNEx9BR8+OFmHDmTk8A=
+github.com/hashicorp/go-plugin v1.6.0/go.mod h1:lBS5MtSSBZk0SHc66KACcjjlU6WzEVP/8pwz68aMkCI=
 github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a h1:FmnBDwGwlTgugDGbVxwV8UavqSMACbGrUpfc98yFLR4=
 github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a/go.mod h1:xbXnmKqX9/+RhPkJ4zrEx4738HacP72aaUPlT2RZ4sU=
 github.com/hashicorp/go-retryablehttp v0.5.3/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es7NDiJgTc6Er0maI1Xs=
@@ -871,6 +873,8 @@ github.com/hashicorp/vault-plugin-secrets-kubernetes v0.6.0 h1:DePS4sSAbjYTQrpTP
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.6.0/go.mod h1:4nPWdBQxjIEGZaWWPKHixN7MFHjESOlOtNyy02e/w9c=
 github.com/hashicorp/vault-plugin-secrets-kv v0.17.0 h1:UNYINnuymcGRT+7UA0MciYAz06/6CB3Ll/P32nTXrNk=
 github.com/hashicorp/vault-plugin-secrets-kv v0.17.0/go.mod h1:2U8dr0BrVNIndr1lYrJ3Q92RCrJzpnDCkAmZe/JRyFo=
+github.com/hashicorp/vault-plugin-secrets-kv v0.18.0 h1:pho3GabXdDp8KM0UTNG88W0yEVrif4GtlS03EJa6uGo=
+github.com/hashicorp/vault-plugin-secrets-kv v0.18.0/go.mod h1:RWDJ382+SsTX/s+zfxkjkvIf9ckCUOhzJbg5AVRdNVY=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.2 h1:5eFlzhFXoSe+ntm26wromhtLbPjTCdXcdwpMv7wFeHk=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.2/go.mod h1:OdXvez+GH0XBSRS7gxbS8B1rLUPb8bGk+bDVyEaAzI8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.11.2 h1:LNzIP4zfWivAy/hgCIwETJFr7BBS91bsJ6AlsGhqAc8=
