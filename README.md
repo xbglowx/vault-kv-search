@@ -1,3 +1,6 @@
+# ⚠️ Looking for a maintainer ⚠️
+Looking for someone to take this project from me. https://github.com/xbglowx/vault-kv-search/issues/121
+
 # vault-kv-search [![Build and Test](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml) [![CodeQL](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml) [![golangci-lint](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml)
 
 This tool is compatible with secrets kv v1 and v2.
