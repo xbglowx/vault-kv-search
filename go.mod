@@ -1,6 +1,6 @@
 module github.com/xbglowx/vault-kv-search
 
-go 1.23.8
+go 1.24.0
 
 toolchain go1.24.3
 
@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/vault v1.19.3
 	github.com/hashicorp/vault-plugin-secrets-kv v0.21.0
 	github.com/hashicorp/vault/api v1.16.0
-	github.com/hashicorp/vault/sdk v0.15.2
+	github.com/hashicorp/vault/sdk v0.16.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/text v0.25.0
