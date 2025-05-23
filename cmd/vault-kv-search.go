@@ -240,7 +240,7 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 	}
 
 	if len(pathList.Warnings) > 0 {
-		return fmt.Errorf(pathList.Warnings[0])
+		return errors.New(pathList.Warnings[0])
 	}
 
 	for _, x := range pathList.Data["keys"].([]interface{}) {
