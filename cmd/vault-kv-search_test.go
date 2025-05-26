@@ -152,15 +152,23 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 	useRegex := false
 
 	// Configure the vault client
-	os.Setenv("VAULT_TOKEN", client.Token())
-	os.Setenv("VAULT_ADDR", client.Address())
-	os.Setenv("VAULT_SKIP_VERIFY", "true")
+	if err := os.Setenv("VAULT_TOKEN", client.Token()); err != nil {
+		t.Fatalf("failed to set VAULT_TOKEN: %v", err)
+	}
+	if err := os.Setenv("VAULT_ADDR", client.Address()); err != nil {
+		t.Fatalf("failed to set VAULT_ADDR: %v", err)
+	}
+	if err := os.Setenv("VAULT_SKIP_VERIFY", "true"); err != nil {
+		t.Fatalf("failed to set VAULT_SKIP_VERIFY: %v", err)
+	}
 
 	// Call the function you want to test
 	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput)
 
 	// Read from the buffer to get the stdout output
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatalf("failed to close writer: %v", err)
+	}
 	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(r)
 
