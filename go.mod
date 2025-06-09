@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/vault v1.19.5
 	github.com/hashicorp/vault-plugin-secrets-kv v0.24.0
 	github.com/hashicorp/vault/api v1.20.0
-	github.com/hashicorp/vault/sdk v0.17.0
+	github.com/hashicorp/vault/sdk v0.18.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/text v0.25.0
