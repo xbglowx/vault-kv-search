@@ -12,6 +12,17 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    
+    services:
+      vault:
+        image: hashicorp/vault:latest
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: test-token
+          VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+        ports:
+          - 8200:8200
+        options: --cap-add=IPC_LOCK
+    
     steps:
     - uses: actions/checkout@v4
 
@@ -20,8 +31,16 @@ jobs:
       with:
         go-version: '1.24.x'
 
+    - name: Wait for Vault to be ready
+      run: |
+        timeout 30 bash -c 'until curl -f http://localhost:8200/v1/sys/health; do sleep 2; done'
+        
     - name: Build
       run: make vault-kv-search
 
     - name: Test
+      env:
+        VAULT_ADDR: http://localhost:8200
+        VAULT_TOKEN: test-token
+        VAULT_SKIP_VERIFY: "true"
       run: make test
