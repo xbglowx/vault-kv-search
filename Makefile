@@ -22,6 +22,10 @@ vault-kv-search: cmd/*.go
 test:
 	@go test -v ./...
 
+.PHONY: test-docker
+test-docker:
+	@./test-with-docker.sh
+
 .PHONY: clean
 clean:
 	@rm -f vault-kv-search*

@@ -5,6 +5,8 @@ Looking for someone to take this project from me. https://github.com/xbglowx/vau
 
 This tool is compatible with secrets kv v1 and v2.
 
+> **Note**: Testing has been migrated to use Docker-based Vault containers for more realistic testing environments.
+
 ## Example Usage
 
 - Export or prepend command with VAULT_ADDR and your VAULT_TOKEN
@@ -39,3 +41,39 @@ This tool is compatible with secrets kv v1 and v2.
   `> vault-kv-search example.com`
 
 - To display the secrets, and not only the vault path, use the `--showsecrets` parameter.
+
+## Development
+
+### Running Tests
+
+Tests require a running Vault instance. You can run tests in two ways:
+
+#### Using Docker (Recommended)
+
+```bash
+# Run tests with automatically managed Vault container
+make test-docker
+```
+
+This will:
+1. Start a Vault dev server in a Docker container
+2. Run all tests against the containerized Vault
+3. Clean up the container when done
+
+#### Manual Setup
+
+```bash
+# Start Vault container manually
+docker compose -f docker-compose.test.yml up -d
+
+# Set environment variables
+export VAULT_ADDR=http://localhost:8200
+export VAULT_TOKEN=test-token
+export VAULT_SKIP_VERIFY=true
+
+# Run tests
+make test
+
+# Clean up
+docker compose -f docker-compose.test.yml down
+```

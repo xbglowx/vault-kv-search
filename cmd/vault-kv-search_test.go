@@ -2,73 +2,61 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"os"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/hashicorp/go-hclog"
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
-
-	vaulthttp "github.com/hashicorp/vault/http"
 )
 
-// testVaultServer creates a test vault cluster and returns a configured API
-// client and closer function.
+// testVaultServer creates a test vault client connected to the Docker container
+// and returns a configured API client and closer function.
 func testVaultServer(t *testing.T) (*api.Client, func()) {
 	t.Helper()
 
-	client, _, closer := testVaultServerUnseal(t)
-	return client, closer
-}
+	config := api.DefaultConfig()
 
-// testVaultServerUnseal creates a test vault cluster and returns a configured
-// API client, list of unseal keys (as strings), and a closer function.
-func testVaultServerUnseal(t *testing.T) (*api.Client, []string, func()) {
-	t.Helper()
-
-	return testVaultServerCoreConfig(t, &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv":    kv.Factory,
-			"kv-v2": kv.VersionedKVFactory,
-		},
-		Logger: hclog.New(&hclog.LoggerOptions{
-			Level: hclog.Off,
-		}),
-	})
-}
-
-// testVaultServerCoreConfig creates a new vault cluster with the given core
-// configuration. This is a lower-level test helper.
-func testVaultServerCoreConfig(t *testing.T, coreConfig *vault.CoreConfig) (*api.Client, []string, func()) {
-	t.Helper()
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-
-	// Make it easy to get access to the active
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
-
-	// Get the client already setup for us!
-	client := cluster.Cores[0].Client
-	client.SetToken(cluster.RootToken)
-
-	// Convert the unseal keys to base64 encoded, since these are how the user
-	// will get them.
-	unsealKeys := make([]string, len(cluster.BarrierKeys))
-	for i := range unsealKeys {
-		unsealKeys[i] = base64.StdEncoding.EncodeToString(cluster.BarrierKeys[i])
+	// Use environment variables set by CI or default to localhost for local testing
+	vaultAddr := os.Getenv("VAULT_ADDR")
+	if vaultAddr == "" {
+		vaultAddr = "http://localhost:8200"
 	}
 
-	return client, unsealKeys, func() { defer cluster.Cleanup() }
+	vaultToken := os.Getenv("VAULT_TOKEN")
+	if vaultToken == "" {
+		vaultToken = "test-token"
+	}
+
+	config.Address = vaultAddr
+	config.Timeout = time.Second * 30
+
+	client, err := api.NewClient(config)
+	if err != nil {
+		t.Fatalf("failed to create vault client: %v", err)
+	}
+
+	client.SetToken(vaultToken)
+
+	// Wait for vault to be ready
+	for i := 0; i < 30; i++ {
+		_, err := client.Sys().Health()
+		if err == nil {
+			break
+		}
+		if i == 29 {
+			t.Fatalf("vault not ready after 30 attempts: %v", err)
+		}
+		time.Sleep(time.Second)
+	}
+
+	return client, func() {
+		// Clean up any test data by unmounting test paths
+		_ = client.Sys().Unmount("test-kv1")
+		_ = client.Sys().Unmount("test-kv2")
+	}
 }
 
 func TestListSecretsMultipleKVStores(t *testing.T) {
@@ -150,17 +138,6 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 	searchObjects := []string{"value"}
 	showSecrets := false
 	useRegex := false
-
-	// Configure the vault client
-	if err := os.Setenv("VAULT_TOKEN", client.Token()); err != nil {
-		t.Fatalf("failed to set VAULT_TOKEN: %v", err)
-	}
-	if err := os.Setenv("VAULT_ADDR", client.Address()); err != nil {
-		t.Fatalf("failed to set VAULT_ADDR: %v", err)
-	}
-	if err := os.Setenv("VAULT_SKIP_VERIFY", "true"); err != nil {
-		t.Fatalf("failed to set VAULT_SKIP_VERIFY: %v", err)
-	}
 
 	// Call the function you want to test
 	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput)
