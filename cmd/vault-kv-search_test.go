@@ -13,7 +13,7 @@ import (
 )
 
 // testVaultServer creates a test vault client connected to the Docker container
-// and returns a configured API client and closer function.
+// and returns a client and closer function.
 func testVaultServer(t *testing.T) (*api.Client, func()) {
 	t.Helper()
 
@@ -162,6 +162,91 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 		`{"search":"value","path":"test-kv2/dir1/test1","key":"key1","value":"obfuscated"}`,
 		`{"search":"value","path":"test-kv2/test1","key":"key1","value":"obfuscated"}`,
 	)
+
+	// Validate actual matches expected
+	if actualOutput != expectedOutput {
+		t.Errorf("Expected output '%s', but got '%s'", expectedOutput, actualOutput)
+	}
+}
+
+func TestListSecretsMultipleKVStoresWithRegex(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	sysClient := client.Sys()
+
+	// Create additional logical secret mountpoints for type KVv1
+	mountInputKv1 := &api.MountInput{
+		Type: "kv-v1",
+	}
+	err := sysClient.Mount("test-kv1", mountInputKv1)
+	if err != nil {
+		t.Log("Failed to mount test-kv1: ", err)
+	}
+
+	logical := client.Logical()
+
+	// Write KVv1 test data to vault
+	testDataKv1 := []struct {
+		path  string
+		key   string
+		value string
+	}{
+		{"test-kv1/test1", "key1", "data1"},
+		{"test-kv1/dir1/test1", "key1", "foo-data-bar"},
+	}
+
+	for _, v := range testDataKv1 {
+		data := map[string]interface{}{
+			v.key: v.value,
+		}
+		_, err := logical.Write(v.path, data)
+		if err != nil {
+			t.Log("Failed to write test data to KVv1: ", err)
+		}
+	}
+
+	// Redirect stdout to a buffer
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	args := []string{"^foo-"}
+	crawlingDelay := 15
+	jsonOutput := true
+	kvVersion := 1
+	searchObjects := []string{"value"}
+	showSecrets := false
+	useRegex := true
+
+	// Configure the vault client
+	if err := os.Setenv("VAULT_TOKEN", client.Token()); err != nil {
+		t.Fatalf("failed to set VAULT_TOKEN: %v", err)
+	}
+	if err := os.Setenv("VAULT_ADDR", client.Address()); err != nil {
+		t.Fatalf("failed to set VAULT_ADDR: %v", err)
+	}
+	if err := os.Setenv("VAULT_SKIP_VERIFY", "true"); err != nil {
+		t.Fatalf("failed to set VAULT_SKIP_VERIFY: %v", err)
+	}
+
+	// Call the function you want to test
+	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30)
+
+	// Read from the buffer to get the stdout output
+	if err := w.Close(); err != nil {
+		t.Fatalf("failed to close writer: %v", err)
+	}
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(r)
+
+	// Create a slice and sort it, so that we can better compares expected vs actual.
+	// The output ordering can change between runs, since we are using wait groups
+	s := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	slices.Sort(s)
+	actualOutput := strings.Join(s, ",")
+
+	// Set expected output
+	expectedOutput := `{"search":"value","path":"test-kv1/dir1/test1","key":"key1","value":"obfuscated"}`
 
 	// Validate actual matches expected
 	if actualOutput != expectedOutput {
