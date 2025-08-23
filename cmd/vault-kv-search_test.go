@@ -140,7 +140,7 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 	useRegex := false
 
 	// Call the function you want to test
-	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput)
+	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30)
 
 	// Read from the buffer to get the stdout output
 	if err := w.Close(); err != nil {
@@ -223,7 +223,7 @@ func TestNestedMapSearch(t *testing.T) {
 	useRegex := false
 
 	// Call the function you want to test
-	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput)
+	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30)
 
 	// Read from the buffer to get the stdout output
 	if err := w.Close(); err != nil {
@@ -233,10 +233,10 @@ func TestNestedMapSearch(t *testing.T) {
 	_, _ = buf.ReadFrom(r)
 
 	actualOutput := strings.TrimSpace(buf.String())
-	
+
 	// Log the actual output to see what we're getting
 	t.Logf("Actual output: %s", actualOutput)
-	
+
 	// We should find "connectionstring2" in both uri fields
 	// The exact output format will depend on how the search traverses the nested structure
 	if !strings.Contains(actualOutput, "connectionstring2") {
@@ -247,7 +247,7 @@ func TestNestedMapSearch(t *testing.T) {
 	if actualOutput == "" {
 		t.Error("Expected search results but got empty output")
 	}
-	
+
 	// Count how many matches we should have - there should be 2 uri fields with connectionstring2
 	matches := strings.Count(actualOutput, "connectionstring2")
 	if matches < 2 {
