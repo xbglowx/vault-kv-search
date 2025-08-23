@@ -1,79 +1,152 @@
 # ⚠️ Looking for a maintainer ⚠️
 Looking for someone to take this project from me. https://github.com/xbglowx/vault-kv-search/issues/121
 
-# vault-kv-search [![Build and Test](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml) [![CodeQL](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml) [![golangci-lint](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml)
+# vault-kv-search
+[![Build and Test](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml) [![CodeQL](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml) [![golangci-lint](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml)
 
-This tool is compatible with secrets kv v1 and v2.
+`vault-kv-search` is a command-line tool for recursively searching for secrets within HashiCorp Vault's Key-Value (KV) stores (versions 1 and 2). It helps you quickly find where a specific value, key, or path is located across many secrets, making it an essential utility for auditing and managing your Vault environment.
 
-> **Note**: Testing has been migrated to use Docker-based Vault containers for more realistic testing environments.
+## Table of Contents
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Prerequisites](#prerequisites)
+  - [Command Flags](#command-flags)
+  - [Examples](#examples)
+- [Development](#development)
+  - [Building from Source](#building-from-source)
+  - [Running Tests](#running-tests)
+- [License](#license)
 
-## Example Usage
+## Features
+- **Recursive Search:** Traverses nested paths in Vault to find secrets.
+- **Multi-Target Search:** Search within secret values, keys, or paths.
+- **Regex Support:** Use regular expressions for powerful and flexible search patterns.
+- **KV v1 and v2 Support:** Works seamlessly with both versions of the KV secrets engine.
+- **Multiple Output Formats:** Choose between human-readable text and structured `json` output.
+- **Cross-Platform:** Builds for Linux, macOS, and Windows.
+- **Search All Stores:** Can automatically discover and search all mounted KV stores.
 
-- Export or prepend command with VAULT_ADDR and your VAULT_TOKEN
+## Installation
+You can download the latest pre-compiled binaries for your operating system from the [**GitHub Releases**](https://github.com/xbglowx/vault-kv-search/releases) page.
 
-  ```
-  > export VAULT_ADDR=https://vaultserver:8200
-  > export VAULT_TOKEN=$(cat ~/.vault-token)
-  ```
+1.  Download the appropriate binary for your system (e.g., `vault-kv-search-linux-amd64`).
+2.  Make the binary executable: `chmod +x vault-kv-search-*`
+3.  (Optional) Move it to a directory in your `PATH` for easy access: `sudo mv vault-kv-search-* /usr/local/bin/vault-kv-search`
 
-- Search values for the substring 'example.com':
+## Usage
 
-  `> vault-kv-search secret/ example.com`
+### Prerequisites
+The tool requires the following environment variables to be set to authenticate with your Vault server:
+```sh
+export VAULT_ADDR="https://your-vault-server:8200"
+export VAULT_TOKEN="s.YourVaultToken"
+```
+You may also need `VAULT_SKIP_VERIFY=true` if your Vault instance uses a self-signed certificate.
 
-- Search keys for substring 'example.com':
+### Command Flags
+```
+Usage:
+  vault-kv-search [search-path] <search-string> [flags]
 
-  `> vault-kv-search --search=key secret/ example.com`
+Flags:
+  -c, --crawling-delay int   Crawling delay in milliseconds (default 15)
+  -h, --help                 help for vault-kv-search
+  -j, --json                 Enable JSON output
+  -k, --kv-version int       KV store version
+      --regex                Enable regex search
+  -s, --search stringArray   What to search for: path, key, or value (default [value])
+      --show-secrets         Show secret values in output
+  -t, --timeout int          Vault client timeout in seconds (default 30)
+      --version              version for vault-kv-search
+```
 
-- Search keys and values for substring 'example.com':
+### Examples
 
-  `> vault-kv-search --search=value --search=key secret/ example.com`
+1.  **Search values for a substring:**
+    ```sh
+    vault-kv-search secret/production/ "api.example.com"
+    ```
 
-- Search keys and values for substring starting with 'example.com':
+2.  **Search keys for a substring:**
+    ```sh
+    vault-kv-search --search=key secret/ "username"
+    ```
 
-  `> vault-kv-search --search=value --search=key --regex secret/ '^example.com'`
+3.  **Search both keys and values:**
+    ```sh
+    vault-kv-search --search=key --search=value secret/ "database"
+    ```
 
-- Search secret name containing substring 'sshkeys':
+4.  **Search using a regular expression:**
+    ```sh
+    vault-kv-search --regex secret/ "^db-"
+    ```
 
-  `> vault-kv-search --search=path secret/ sshkeys`
+5.  **Search for a secret by its path (name):**
+    ```sh
+    vault-kv-search --search=path secret/ "ssh-keys"
+    ```
 
-- Search all mounted KV secret engines. Since this requires listing all mounts, the operator must have proper permissions to do so.
+6.  **Search all mounted KV stores at once:**
+    *This requires permissions to list mounts.*
+    ```sh
+    vault-kv-search "sensitive-data"
+    ```
 
-  `> vault-kv-search example.com`
+7.  **Show the secret value in the output:**
+    ```sh
+    vault-kv-search --show-secrets secret/ "password123"
+    ```
 
-- To display the secrets, and not only the vault path, use the `--showsecrets` parameter.
+8.  **Output results in JSON format:**
+    ```sh
+    vault-kv-search --json secret/ "user@example.com"
+    ```
 
 ## Development
 
-### Running Tests
+### Building from Source
+**Prerequisites:**
+- Go 1.24+
+- Make
 
-Tests require a running Vault instance. You can run tests in two ways:
+To build the binary from the source code:
+```sh
+make vault-kv-search
+```
+The compiled binary will be available in the root of the project directory.
+
+### Running Tests
+Tests require a running Vault instance. The recommended way to run tests is using Docker, which automates the setup and teardown of a Vault container.
+
+**Prerequisites:**
+- Docker and Docker Compose
 
 #### Using Docker (Recommended)
-
-```bash
-# Run tests with automatically managed Vault container
+This command handles everything for you:
+```sh
+# Run tests with an automatically managed Vault container
 make test-docker
 ```
 
-This will:
-1. Start a Vault dev server in a Docker container
-2. Run all tests against the containerized Vault
-3. Clean up the container when done
-
 #### Manual Setup
-
-```bash
-# Start Vault container manually
+If you prefer to manage the Vault container yourself:
+```sh
+# 1. Start Vault container
 docker compose -f docker-compose.test.yml up -d
 
-# Set environment variables
+# 2. Set environment variables
 export VAULT_ADDR=http://localhost:8200
 export VAULT_TOKEN=test-token
 export VAULT_SKIP_VERIFY=true
 
-# Run tests
+# 3. Run tests
 make test
 
-# Clean up
+# 4. Clean up
 docker compose -f docker-compose.test.yml down
 ```
+
+## License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
