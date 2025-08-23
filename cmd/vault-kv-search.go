@@ -212,8 +212,10 @@ func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEn
 		case bool:
 			valueStringType = strconv.FormatBool(v)
 		case map[string]interface{}:
-			// Recurse
-			return vc.digDeeper(version, v, dirEntry, fullPath, searchObject)
+			// Recurse into nested map, but don't return immediately
+			// Continue processing other keys at this level
+			vc.digDeeper(version, v, dirEntry, fullPath, searchObject)
+			continue
 		// Needed when start from root of the store
 		case []interface{}:
 		case nil:
