@@ -62,9 +62,9 @@ func (vc *vaultClient) getKvVersion(path string) (int, error) {
 }
 
 // VaultKvSearch is the main function
-func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int, kvVersion int, jsonOutput bool) {
+func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int, kvVersion int, jsonOutput bool, timeoutSeconds int) {
 	config := vault.DefaultConfig()
-	config.Timeout = time.Second * 5
+	config.Timeout = time.Duration(timeoutSeconds) * time.Second
 
 	client, err := vault.NewClient(config)
 	if err != nil {

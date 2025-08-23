@@ -62,7 +62,7 @@ available KV stores and the argument specified is the substring you want to sear
 		return checkInputs(cmd, args)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput)
+		VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, timeout)
 	},
 	Args:    cobra.RangeArgs(1, 2),
 	Example: "vault-kv-search kv/ foo",
@@ -80,6 +80,7 @@ var (
 	kvVersion     int
 	searchObjects []string
 	showSecrets   bool
+	timeout       int
 	useRegex      bool
 )
 
@@ -92,4 +93,5 @@ func init() {
 		"once using format CSV. Defaults to 'value'")
 	RootCmd.Flags().BoolVarP(&showSecrets, "showsecrets", "s", false, "Show secrets values")
 	RootCmd.Flags().BoolVarP(&useRegex, "regex", "r", false, "Enable searching regex substring")
+	RootCmd.Flags().IntVarP(&timeout, "timeout", "t", 30, "Vault client timeout in seconds")
 }
