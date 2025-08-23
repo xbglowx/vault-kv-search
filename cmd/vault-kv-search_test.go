@@ -168,3 +168,89 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 		t.Errorf("Expected output '%s', but got '%s'", expectedOutput, actualOutput)
 	}
 }
+
+func TestNestedMapSearch(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	sysClient := client.Sys()
+
+	// Create a KVv2 mount for testing nested maps with a unique name
+	mountPath := fmt.Sprintf("test-nested-%d", time.Now().Unix())
+	mountInputKv2 := &api.MountInput{
+		Type: "kv-v2",
+	}
+	err := sysClient.Mount(mountPath, mountInputKv2)
+	if err != nil {
+		t.Fatalf("Failed to mount %s: %v", mountPath, err)
+	}
+
+	logical := client.Logical()
+
+	// Write nested map data similar to Spring configuration
+	nestedData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"mongodb": map[string]interface{}{
+				"key1": map[string]interface{}{
+					"database": "databasename1",
+					"uri":      "connectionstring2.database.org",
+				},
+				"key2": map[string]interface{}{
+					"database": "databasename2",
+					"uri":      "connectionstring2.database.org",
+				},
+			},
+		},
+	}
+
+	secretPath := fmt.Sprintf("%s/data/config", mountPath)
+	_, err = logical.Write(secretPath, nestedData)
+	if err != nil {
+		t.Fatalf("Failed to write nested test data: %v", err)
+	}
+
+	// Redirect stdout to a buffer
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// Search for "connectionstring2" which should be found in both key1.uri and key2.uri
+	args := []string{mountPath + "/", "connectionstring2"}
+	crawlingDelay := 15
+	jsonOutput := true
+	kvVersion := 2
+	searchObjects := []string{"value"}
+	showSecrets := true
+	useRegex := false
+
+	// Call the function you want to test
+	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput)
+
+	// Read from the buffer to get the stdout output
+	if err := w.Close(); err != nil {
+		t.Fatalf("failed to close writer: %v", err)
+	}
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(r)
+
+	actualOutput := strings.TrimSpace(buf.String())
+	
+	// Log the actual output to see what we're getting
+	t.Logf("Actual output: %s", actualOutput)
+	
+	// We should find "connectionstring2" in both uri fields
+	// The exact output format will depend on how the search traverses the nested structure
+	if !strings.Contains(actualOutput, "connectionstring2") {
+		t.Errorf("Expected to find 'connectionstring2' in nested map search, but got: %s", actualOutput)
+	}
+
+	// Check that we get results (not empty)
+	if actualOutput == "" {
+		t.Error("Expected search results but got empty output")
+	}
+	
+	// Count how many matches we should have - there should be 2 uri fields with connectionstring2
+	matches := strings.Count(actualOutput, "connectionstring2")
+	if matches < 2 {
+		t.Errorf("Expected at least 2 matches for 'connectionstring2' but got %d. Output: %s", matches, actualOutput)
+	}
+}
