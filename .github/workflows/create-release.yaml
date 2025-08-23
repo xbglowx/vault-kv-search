@@ -2,11 +2,25 @@ name: Create Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
   build:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -35,7 +49,8 @@ jobs:
         path: ./vault-kv-search-${{ matrix.goos }}-${{ matrix.goarch }}
 
   release:
-    needs: build
+    needs: [release-please, build]
+    if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -54,9 +69,10 @@ jobs:
         cd tmp
         shasum -a 256 vault-kv-search-* > sha256sums.txt
 
-    - name: Create Release and Upload Assets
+    - name: Update Release and Upload Assets
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ needs.release-please.outputs.tag_name }}
         draft: false
         prerelease: false
         files: |
