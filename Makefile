@@ -24,7 +24,7 @@ test:
 
 .PHONY: test-docker
 test-docker:
-	@./test-with-docker.sh
+	@go test -v ./...
 
 .PHONY: clean
 clean:

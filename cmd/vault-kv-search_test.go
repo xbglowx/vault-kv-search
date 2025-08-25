@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"slices"
@@ -10,27 +11,50 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// testVaultServer creates a test vault client connected to the Docker container
-// and returns a client and closer function.
-func testVaultServer(t *testing.T) (*api.Client, func()) {
+// testVaultServerWithTestcontainers creates a test vault client connected to a Vault container
+// started by testcontainers-go.
+func testVaultServerWithTestcontainers(t *testing.T) (*api.Client, func()) {
 	t.Helper()
 
+	ctx := context.Background()
+
+	// Use generic container instead of vault module to avoid initialization issues
+	req := testcontainers.ContainerRequest{
+		Image:        "hashicorp/vault:1.15.6",
+		ExposedPorts: []string{"8200/tcp"},
+		Env: map[string]string{
+			"VAULT_DEV_ROOT_TOKEN_ID":  "test-token",
+			"VAULT_DEV_LISTEN_ADDRESS": "0.0.0.0:8200",
+		},
+		Cmd:        []string{"vault", "server", "-dev"},
+		WaitingFor: wait.ForHTTP("/v1/sys/health").WithPort("8200/tcp"),
+	}
+
+	vaultContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		t.Fatalf("failed to start vault container: %v", err)
+	}
+
+	// Get the container's mapped port and build HTTP address
+	mappedPort, err := vaultContainer.MappedPort(ctx, "8200")
+	if err != nil {
+		t.Fatalf("failed to get mapped port: %v", err)
+	}
+
+	host, err := vaultContainer.Host(ctx)
+	if err != nil {
+		t.Fatalf("failed to get container host: %v", err)
+	}
+
 	config := api.DefaultConfig()
-
-	// Use environment variables set by CI or default to localhost for local testing
-	vaultAddr := os.Getenv("VAULT_ADDR")
-	if vaultAddr == "" {
-		vaultAddr = "http://localhost:8200"
-	}
-
-	vaultToken := os.Getenv("VAULT_TOKEN")
-	if vaultToken == "" {
-		vaultToken = "test-token"
-	}
-
-	config.Address = vaultAddr
+	config.Address = fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
 	config.Timeout = time.Second * 30
 
 	client, err := api.NewClient(config)
@@ -38,7 +62,7 @@ func testVaultServer(t *testing.T) (*api.Client, func()) {
 		t.Fatalf("failed to create vault client: %v", err)
 	}
 
-	client.SetToken(vaultToken)
+	client.SetToken("test-token")
 
 	// Wait for vault to be ready
 	for i := 0; i < 30; i++ {
@@ -53,34 +77,40 @@ func testVaultServer(t *testing.T) (*api.Client, func()) {
 	}
 
 	return client, func() {
-		// Clean up any test data by unmounting test paths
-		_ = client.Sys().Unmount("test-kv1")
-		_ = client.Sys().Unmount("test-kv2")
+		if err := vaultContainer.Terminate(ctx); err != nil {
+			t.Fatalf("failed to terminate vault container: %v", err)
+		}
 	}
 }
 
 func TestListSecretsMultipleKVStores(t *testing.T) {
-	client, closer := testVaultServer(t)
+	client, closer := testVaultServerWithTestcontainers(t)
 	defer closer()
 
 	sysClient := client.Sys()
 
 	// Create additional logical secret mountpoints for type KVv1
 	mountInputKv1 := &api.MountInput{
-		Type: "kv-v1",
+		Type: "kv",
+		Options: map[string]string{
+			"version": "1",
+		},
 	}
 	err := sysClient.Mount("test-kv1", mountInputKv1)
 	if err != nil {
-		t.Log("Failed to mount test-kv1: ", err)
+		t.Fatalf("Failed to mount test-kv1: %v", err)
 	}
 
 	// Create additional logical secret mountpoints for KV type KVv2
 	mountInputKv2 := &api.MountInput{
-		Type: "kv-v2",
+		Type: "kv",
+		Options: map[string]string{
+			"version": "2",
+		},
 	}
 	err = sysClient.Mount("test-kv2", mountInputKv2)
 	if err != nil {
-		t.Log("Failed to mount test-kv2 mount: ", err)
+		t.Fatalf("Failed to mount test-kv2 mount: %v", err)
 	}
 
 	logical := client.Logical()
@@ -101,7 +131,7 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 		}
 		_, err := logical.Write(v.path, data)
 		if err != nil {
-			t.Log("Failed to write test data to KVv1: ", err)
+			t.Fatalf("Failed to write test data to KVv1: %v", err)
 		}
 	}
 
@@ -123,7 +153,7 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 		}
 		_, err := logical.Write(v.path, data)
 		if err != nil {
-			t.Log("Failed to write test data to KVv2: ", err)
+			t.Fatalf("Failed to write test data to KVv2: %v", err)
 		}
 	}
 
@@ -138,6 +168,17 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 	searchObjects := []string{"value"}
 	showSecrets := false
 	useRegex := false
+
+	// Configure the vault client environment variables
+	if err := os.Setenv("VAULT_TOKEN", client.Token()); err != nil {
+		t.Fatalf("failed to set VAULT_TOKEN: %v", err)
+	}
+	if err := os.Setenv("VAULT_ADDR", client.Address()); err != nil {
+		t.Fatalf("failed to set VAULT_ADDR: %v", err)
+	}
+	if err := os.Setenv("VAULT_SKIP_VERIFY", "true"); err != nil {
+		t.Fatalf("failed to set VAULT_SKIP_VERIFY: %v", err)
+	}
 
 	// Call the function you want to test
 	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30)
@@ -170,14 +211,17 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 }
 
 func TestListSecretsMultipleKVStoresWithRegex(t *testing.T) {
-	client, closer := testVaultServer(t)
+	client, closer := testVaultServerWithTestcontainers(t)
 	defer closer()
 
 	sysClient := client.Sys()
 
 	// Create additional logical secret mountpoints for type KVv1
 	mountInputKv1 := &api.MountInput{
-		Type: "kv-v1",
+		Type: "kv",
+		Options: map[string]string{
+			"version": "1",
+		},
 	}
 	err := sysClient.Mount("test-kv1", mountInputKv1)
 	if err != nil {
@@ -255,7 +299,7 @@ func TestListSecretsMultipleKVStoresWithRegex(t *testing.T) {
 }
 
 func TestNestedMapSearch(t *testing.T) {
-	client, closer := testVaultServer(t)
+	client, closer := testVaultServerWithTestcontainers(t)
 	defer closer()
 
 	sysClient := client.Sys()
@@ -263,7 +307,10 @@ func TestNestedMapSearch(t *testing.T) {
 	// Create a KVv2 mount for testing nested maps with a unique name
 	mountPath := fmt.Sprintf("test-nested-%d", time.Now().Unix())
 	mountInputKv2 := &api.MountInput{
-		Type: "kv-v2",
+		Type: "kv",
+		Options: map[string]string{
+			"version": "2",
+		},
 	}
 	err := sysClient.Mount(mountPath, mountInputKv2)
 	if err != nil {
@@ -306,6 +353,17 @@ func TestNestedMapSearch(t *testing.T) {
 	searchObjects := []string{"value"}
 	showSecrets := true
 	useRegex := false
+
+	// Configure the vault client environment variables
+	if err := os.Setenv("VAULT_TOKEN", client.Token()); err != nil {
+		t.Fatalf("failed to set VAULT_TOKEN: %v", err)
+	}
+	if err := os.Setenv("VAULT_ADDR", client.Address()); err != nil {
+		t.Fatalf("failed to set VAULT_ADDR: %v", err)
+	}
+	if err := os.Setenv("VAULT_SKIP_VERIFY", "true"); err != nil {
+		t.Fatalf("failed to set VAULT_SKIP_VERIFY: %v", err)
+	}
 
 	// Call the function you want to test
 	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30)
