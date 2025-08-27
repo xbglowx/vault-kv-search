@@ -15,14 +15,10 @@ Always reference these instructions first and fallback to search or bash command
 - Verify build: `./vault-kv-search --help`
 
 ### Testing
-- Run all tests: `make test-docker` -- takes ~20 seconds including Docker lifecycle. NEVER CANCEL. Set timeout to 60+ seconds.
-- Manual test setup (if needed):
-  - `docker compose -f docker-compose.test.yml up -d`
-  - `export VAULT_ADDR=http://localhost:8200`
-  - `export VAULT_TOKEN=test-token`
-  - `export VAULT_SKIP_VERIFY=true`
-  - `make test` -- takes ~5 seconds. NEVER CANCEL. Set timeout to 30+ seconds.
-  - `docker compose -f docker-compose.test.yml down`
+- Run all tests: `make test` -- takes ~20 seconds including testcontainer lifecycle. NEVER CANCEL. Set timeout to 60+ seconds.
+- Tests use testcontainers-go to automatically manage Vault containers
+- Each test gets an isolated Vault instance (no shared state between tests)
+- Docker must be running for tests to work
 
 ### Code Quality
 - Format code: `go fmt ./...`
@@ -36,17 +32,15 @@ Always reference these instructions first and fallback to search or bash command
 1. **Build validation**: `make vault-kv-search && ./vault-kv-search --help`
 2. **Version check**: `./vault-kv-search version`
 3. **Basic functionality test** (with Vault running):
-   - Start test Vault: `docker compose -f docker-compose.test.yml up -d`
-   - Wait for ready: `timeout 30 bash -c 'until curl -f http://localhost:8200/v1/sys/health; do sleep 2; done'`
-   - Set environment: `export VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=test-token VAULT_SKIP_VERIFY=true`
-   - Test search: `./vault-kv-search secret/ test` (should show no results but not error)
-   - Cleanup: `docker compose -f docker-compose.test.yml down`
-4. **Test suite**: `make test-docker`
+   - Tests are fully automated with testcontainers
+   - Run `make test` to validate functionality
+   - Individual Vault containers are created per test as needed
+4. **Test suite**: `make test`
 
 ### After making changes:
 - ALWAYS run the build validation scenario
 - ALWAYS run `go fmt ./...` and `go vet ./...`
-- ALWAYS run `make test-docker` to ensure tests pass
+- ALWAYS run `make test` to ensure tests pass
 - Test any new CLI flags or functionality manually with a running Vault instance
 
 ## Project Structure
@@ -62,7 +56,6 @@ Always reference these instructions first and fallback to search or bash command
 ├── main.go                       # Entry point
 ├── Makefile                      # Build targets
 ├── go.mod                        # Go module definition
-├── docker-compose.test.yml       # Test environment
 ├── test-with-docker.sh           # Automated test script
 └── .github/workflows/            # CI/CD pipelines
     ├── build-test.yaml           # Build and test workflow
@@ -72,8 +65,7 @@ Always reference these instructions first and fallback to search or bash command
 
 ### Important command patterns:
 - `make vault-kv-search` or `make all` - Build binary
-- `make test` - Run tests (requires running Vault)
-- `make test-docker` - Run tests with managed Docker Vault
+- `make test` - Run tests with automated testcontainers
 - `make clean` - Remove built binaries
 
 ## Common Development Tasks
@@ -92,8 +84,8 @@ Always reference these instructions first and fallback to search or bash command
 4. Add test cases in `cmd/vault-kv-search_test.go`
 
 ### Testing patterns:
-- Tests use Docker-based Vault with token `test-token`
-- Helper function `testVaultServer()` sets up test client
+- Tests use Docker-based Vault containers with token `test-token`
+- Helper function `testVaultServerWithTestcontainers()` sets up isolated test containers
 - Tests create temporary KV mounts for isolation
 - Always clean up test resources in defer functions
 
@@ -124,7 +116,7 @@ For testing:
 2. **Tests fail with connection refused**
    - Ensure Docker is running: `docker --version`
    - Check if port 8200 is available: `ss -ln | grep 8200`
-   - Use `make test-docker` instead of `make test`
+   - Use `make test` instead of `make test`
 
 3. **CI linting failures**
    - Run `go fmt ./...` and `go vet ./...` locally

@@ -130,23 +130,7 @@ This command handles everything for you:
 make test-docker
 ```
 
-#### Manual Setup
-If you prefer to manage the Vault container yourself:
-```sh
-# 1. Start Vault container
-docker compose -f docker-compose.test.yml up -d
-
-# 2. Set environment variables
-export VAULT_ADDR=http://localhost:8200
-export VAULT_TOKEN=test-token
-export VAULT_SKIP_VERIFY=true
-
-# 3. Run tests
-make test
-
-# 4. Clean up
-docker compose -f docker-compose.test.yml down
-```
+The tests use [testcontainers-go](https://golang.testcontainers.org/) to automatically start and stop Vault containers as needed, providing complete isolation and eliminating the need for manual container management.
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
