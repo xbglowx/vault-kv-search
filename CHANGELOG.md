@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/xbglowx/vault-kv-search/compare/v0.3.2...v0.3.3) (2025-09-10)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/hashicorp/vault/api to v1.21.0 ([bd3742d](https://github.com/xbglowx/vault-kv-search/commit/bd3742d43fc240704de3c0b8d288042bc97f0865))
+
 ## [0.3.2](https://github.com/xbglowx/vault-kv-search/compare/v0.3.1...v0.3.2) (2025-09-08)
 
 
