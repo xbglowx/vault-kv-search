@@ -7,7 +7,7 @@ Always reference these instructions first and fallback to search or bash command
 ## Working Effectively
 
 ### Bootstrap and Build
-- Install Go 1.24.0 or later: `go version` should show 1.24+
+- Install Go
 - Install Docker: `docker --version` (required for testing)
 - Clone and build:
   - `cd /path/to/vault-kv-search`
