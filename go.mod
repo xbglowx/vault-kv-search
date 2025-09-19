@@ -1,8 +1,6 @@
 module github.com/xbglowx/vault-kv-search
 
-go 1.24.0
-
-toolchain go1.25.1
+go 1.25.1
 
 require (
 	github.com/hashicorp/vault/api v1.21.0
