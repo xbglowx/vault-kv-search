@@ -106,6 +106,8 @@ github.com/hashicorp/vault/api v1.20.0 h1:KQMHElgudOsr+IbJgmbjHnCTxEpKs9LnozA1D3
 github.com/hashicorp/vault/api v1.20.0/go.mod h1:GZ4pcjfzoOWpkJ3ijHNpEoAxKEsBJnVljyTe3jM2Sms=
 github.com/hashicorp/vault/api v1.21.0 h1:Xej4LJETV/spWRdjreb2vzQhEZt4+B5yxHAObfQVDOs=
 github.com/hashicorp/vault/api v1.21.0/go.mod h1:IUZA2cDvr4Ok3+NtK2Oq/r+lJeXkeCrHRmqdyWfpmGM=
+github.com/hashicorp/vault/api v1.22.0 h1:+HYFquE35/B74fHoIeXlZIP2YADVboaPjaSicHEZiH0=
+github.com/hashicorp/vault/api v1.22.0/go.mod h1:IUZA2cDvr4Ok3+NtK2Oq/r+lJeXkeCrHRmqdyWfpmGM=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
