@@ -3,7 +3,7 @@ module github.com/xbglowx/vault-kv-search
 go 1.25.1
 
 require (
-	github.com/hashicorp/vault/api v1.21.0
+	github.com/hashicorp/vault/api v1.22.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.10.1
 	github.com/testcontainers/testcontainers-go v0.39.0
