@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.6](https://github.com/xbglowx/vault-kv-search/compare/v0.3.5...v0.3.6) (2025-10-24)
+
+
+### Bug Fixes
+
+* **deps:** update module golang.org/x/text to v0.30.0 ([19b66bc](https://github.com/xbglowx/vault-kv-search/commit/19b66bcc74971e2edce2a5727a0935b55bd99072))
+
 ## [0.3.5](https://github.com/xbglowx/vault-kv-search/compare/v0.3.4...v0.3.5) (2025-10-03)
 
 
