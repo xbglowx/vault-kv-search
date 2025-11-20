@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.7](https://github.com/xbglowx/vault-kv-search/compare/v0.3.6...v0.3.7) (2025-11-20)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/testcontainers/testcontainers-go to v0.40.0 ([cebfe14](https://github.com/xbglowx/vault-kv-search/commit/cebfe145e62fabc21bbc8d8bdce0618b18c629cc))
+* **deps:** update module golang.org/x/text to v0.31.0 ([72f9c4e](https://github.com/xbglowx/vault-kv-search/commit/72f9c4e90268e1f144c65a537fb1ea6d0657ffc6))
+
 ## [0.3.6](https://github.com/xbglowx/vault-kv-search/compare/v0.3.5...v0.3.6) (2025-10-24)
 
 
