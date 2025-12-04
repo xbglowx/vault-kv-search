@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.8](https://github.com/xbglowx/vault-kv-search/compare/v0.3.7...v0.3.8) (2025-12-04)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/cobra to v1.10.2 ([730e21c](https://github.com/xbglowx/vault-kv-search/commit/730e21cd92e68fbd277ef87d4979b0f22ecf354c))
+
 ## [0.3.7](https://github.com/xbglowx/vault-kv-search/compare/v0.3.6...v0.3.7) (2025-11-20)
 
 
