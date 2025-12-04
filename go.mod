@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/testcontainers/testcontainers-go v0.40.0
 	golang.org/x/text v0.31.0
 )
