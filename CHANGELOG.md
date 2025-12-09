@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.8](https://github.com/xbglowx/vault-kv-search/compare/v0.3.7...v0.3.8) (2025-12-09)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/cobra to v1.10.2 ([730e21c](https://github.com/xbglowx/vault-kv-search/commit/730e21cd92e68fbd277ef87d4979b0f22ecf354c))
+* **deps:** update module golang.org/x/text to v0.32.0 ([baac5d8](https://github.com/xbglowx/vault-kv-search/commit/baac5d88385d6c4d8c755fcce7a503e10abd2912))
+
 ## [0.3.7](https://github.com/xbglowx/vault-kv-search/compare/v0.3.6...v0.3.7) (2025-11-20)
 
 
