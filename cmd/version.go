@@ -53,7 +53,7 @@ func buildInfo() string {
 		"buildUser": BuildUser,
 		"buildDate": BuildDate,
 		"goVersion": GoVersion,
-		"platform":  GoOS + "/" + GoArch,
+		"platform":  Platform,
 	}
 	t := template.Must(template.New("version").Parse(versionInfoTmpl))
 

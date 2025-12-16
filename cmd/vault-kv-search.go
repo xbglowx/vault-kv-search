@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -41,6 +42,46 @@ type secretMatched struct {
 	Value    string `json:"value"`
 }
 
+// configureToken tries to configure the Vault token on the client.
+//
+// Order:
+//  1. If a token is already set on the client, keep it
+//  2. Otherwise, use VAULT_TOKEN if present
+//  3. Otherwise, try to read ~/.vault-token (token helper style)
+func configureToken(client *vault.Client) error {
+	// 1. Already set on the client (for completeness)
+	if t := client.Token(); t != "" {
+		return nil
+	}
+
+	// 2. Environment variable
+	if t := os.Getenv("VAULT_TOKEN"); t != "" {
+		client.SetToken(t)
+		return nil
+	}
+
+	// 3. Token helper file (~/.vault-token)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine home directory to read token helper: %w", err)
+	}
+
+	tokenFile := filepath.Join(home, ".vault-token")
+
+	data, err := os.ReadFile(tokenFile)
+	if err != nil {
+		return fmt.Errorf("no Vault token configured (VAULT_TOKEN env or %s): %w", tokenFile, err)
+	}
+
+	token := strings.TrimSpace(string(data))
+	if token == "" {
+		return fmt.Errorf("token helper file %s exists but is empty", tokenFile)
+	}
+
+	client.SetToken(token)
+	return nil
+}
+
 func (vc *vaultClient) getKvVersion(path string) (int, error) {
 	mounts, err := vc.sys.ListMounts()
 	if err != nil {
@@ -73,7 +114,15 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 		os.Exit(1)
 	}
 
-	// If length of postional args is 1, the users didn't specify a search-path and wants to search all available KV stores.
+	if err := configureToken(client); err != nil {
+		_, err := fmt.Fprintln(os.Stderr, err)
+		if err != nil {
+			return
+		}
+		os.Exit(1)
+	}
+
+	// If the length of positional args is 1, the users didn't specify a search-path and wants to search all available KV stores.
 	var searchString string
 	var searchAllKvStores bool
 	if len(args) == 1 {
@@ -183,7 +232,10 @@ func (vc *vaultClient) showMatch(secret secretMatched) {
 		}
 		secretJSON, err := json.Marshal(secret)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "can't marshal JSON: %s\n", err)
+			_, err := fmt.Fprintf(os.Stderr, "can't marshal JSON: %s\n", err)
+			if err != nil {
+				return
+			}
 		}
 		fmt.Println(string(secretJSON))
 	} else {
@@ -237,7 +289,10 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 	}
 
 	if pathList == nil {
-		fmt.Fprintf(os.Stderr, "!!Warning!! search-path %s doesn't have any contents. Skipping.\n", path)
+		_, err := fmt.Fprintf(os.Stderr, "!!Warning!! search-path %s doesn't have any contents. Skipping.\n", path)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 

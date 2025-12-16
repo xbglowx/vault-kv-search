@@ -55,7 +55,7 @@ var RootCmd = &cobra.Command{
 	Short: "Search Hashicorp Vault",
 	Long: `Recursively search Hashicorp Vault for substring
 
-If only one postional argument is given, it is assumed you want to search all 
+If only one positional argument is given, it is assumed you want to search all 
 available KV stores and the argument specified is the substring you want to search for`,
 
 	PreRunE: func(cmd *cobra.Command, args []string) error {
