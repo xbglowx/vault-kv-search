@@ -24,7 +24,11 @@ test:
 
 .PHONY: test-coverage
 test-coverage:
-	@go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+	@go test -coverprofile=coverage.txt ./...
+
+.PHONY: test-race
+test-race:
+	@go test -race ./...
 
 .PHONY: test-docker
 test-docker:
