@@ -20,34 +20,15 @@ vault-kv-search: cmd/*.go
 
 .PHONY: test
 test:
-	@go test -tags=integration -v ./...
+	@go test -v ./...
 
 .PHONY: test-coverage
-test-coverage: test-coverage-unit test-coverage-integration
-	@echo "Merging coverage files..."
-	@go install github.com/wadey/gocovmerge@latest
-	@gocovmerge coverage-unit.txt coverage-integration.txt > coverage.txt
-	@echo "Coverage merged into coverage.txt"
-
-.PHONY: test-coverage-unit
-test-coverage-unit:
-	@go test -coverprofile=coverage-unit.txt -covermode=atomic ./...
-
-.PHONY: test-coverage-integration
-test-coverage-integration:
-	@go test -tags=integration -coverprofile=coverage-integration.txt -covermode=atomic ./...
+test-coverage:
+	@go test -coverprofile=coverage.txt -covermode=atomic ./...
 
 .PHONY: test-race
 test-race:
-	@go test -tags=integration -race ./...
-
-.PHONY: test-integration
-test-integration:
-	@go test -tags=integration -v ./...
-
-.PHONY: test-docker
-test-docker:
-	@go test -v ./...
+	@go test -race ./...
 
 .PHONY: clean
 clean:
