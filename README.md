@@ -118,19 +118,25 @@ make vault-kv-search
 The compiled binary will be available in the root of the project directory.
 
 ### Running Tests
-Tests require a running Vault instance. The recommended way to run tests is using Docker, which automates the setup and teardown of a Vault container.
+Tests use [testcontainers-go](https://golang.testcontainers.org/) to automatically start and stop Vault containers, providing complete isolation and eliminating the need for manual container management.
 
 **Prerequisites:**
-- Docker and Docker Compose
+- Docker (Docker Desktop, Colima, or similar)
 
-#### Using Docker (Recommended)
-This command handles everything for you:
 ```sh
-# Run tests with an automatically managed Vault container
-make test-docker
+make test
 ```
 
-The tests use [testcontainers-go](https://golang.testcontainers.org/) to automatically start and stop Vault containers as needed, providing complete isolation and eliminating the need for manual container management.
+#### Using Colima
+If you're using [Colima](https://github.com/abiosoft/colima) instead of Docker Desktop, you need to set the following environment variables:
+
+```sh
+export DOCKER_HOST="unix://${HOME}/.colima/default/docker.sock"
+export TESTCONTAINERS_RYUK_DISABLED=true
+make test
+```
+
+You can add these exports to your shell profile (`~/.zshrc` or `~/.bashrc`) to make them persistent.
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
