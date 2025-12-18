@@ -24,5 +24,11 @@ jobs:
     - name: Build
       run: make vault-kv-search
 
-    - name: Test
-      run: make test
+    - name: Test with coverage
+      run: make test-coverage
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: coverage.txt

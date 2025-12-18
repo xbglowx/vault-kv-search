@@ -2,7 +2,7 @@
 Looking for someone to take this project from me. https://github.com/xbglowx/vault-kv-search/issues/121
 
 # vault-kv-search
-[![Build and Test](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml) [![CodeQL](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml) [![golangci-lint](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml)
+[![Build and Test](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml) [![CodeQL](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml) [![golangci-lint](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml) [![codecov](https://codecov.io/gh/xbglowx/vault-kv-search/graph/badge.svg)](https://codecov.io/gh/xbglowx/vault-kv-search)
 
 `vault-kv-search` is a command-line tool for recursively searching for secrets within HashiCorp Vault's Key-Value (KV) stores (versions 1 and 2). It helps you quickly find where a specific value, key, or path is located across many secrets, making it an essential utility for auditing and managing your Vault environment.
 
