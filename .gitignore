@@ -17,6 +17,7 @@
 # IDE
 .idea
 *.iml
+.vscode
 
 /bin/
 /test/tests.*
