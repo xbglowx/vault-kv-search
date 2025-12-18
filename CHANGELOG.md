@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/xbglowx/vault-kv-search/compare/v0.3.8...v0.4.0) (2025-12-18)
+
+
+### Features
+
+* **token:** Allow .vault_token for handling token like does vault binary ([3b859c9](https://github.com/xbglowx/vault-kv-search/commit/3b859c9e1e48ec5a67fd274acd5381a6f08cb152))
+
+
+### Bug Fixes
+
+* **ci:** remove race flag from coverage to fix testcontainer conflict ([ec54c40](https://github.com/xbglowx/vault-kv-search/commit/ec54c40788e4d06dd7c7f112e82fe3581f64809e))
+
 ## [0.3.8](https://github.com/xbglowx/vault-kv-search/compare/v0.3.7...v0.3.8) (2025-12-09)
 
 
