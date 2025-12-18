@@ -22,5 +22,6 @@
 /bin/
 /test/tests.*
 /test/coverage.*
+coverage*.txt
 
 vault-kv-search
