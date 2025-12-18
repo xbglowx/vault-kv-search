@@ -24,8 +24,26 @@ jobs:
     - name: Build
       run: make vault-kv-search
 
-    - name: Test with coverage
-      run: make test-coverage
+    - name: Unit tests with coverage
+      run: make test-coverage-unit
+
+    - name: Integration tests with coverage
+      id: integration-coverage
+      run: make test-coverage-integration
+      continue-on-error: true
+
+    - name: Integration tests (verify passing)
+      if: steps.integration-coverage.outcome == 'failure'
+      run: make test-integration
+
+    - name: Merge coverage reports
+      run: |
+        go install github.com/wadey/gocovmerge@latest
+        if [ -f coverage-integration.txt ]; then
+          gocovmerge coverage-unit.txt coverage-integration.txt > coverage.txt
+        else
+          cp coverage-unit.txt coverage.txt
+        fi
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
