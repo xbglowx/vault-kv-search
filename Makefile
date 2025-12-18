@@ -22,10 +22,6 @@ vault-kv-search: cmd/*.go
 test:
 	@go test -v ./...
 
-.PHONY: test-coverage
-test-coverage:
-	@go test -coverprofile=coverage.txt -covermode=atomic ./...
-
 .PHONY: test-race
 test-race:
 	@go test -race ./...
