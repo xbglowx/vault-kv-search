@@ -28,6 +28,13 @@ Looking for someone to take this project from me. https://github.com/xbglowx/vau
 - **Search All Stores:** Can automatically discover and search all mounted KV stores.
 
 ## Installation
+
+### Homebrew
+```sh
+brew install xbglowx/tap/vault-kv-search
+```
+
+### Pre-compiled Binaries
 You can download the latest pre-compiled binaries for your operating system from the [**GitHub Releases**](https://github.com/xbglowx/vault-kv-search/releases) page.
 
 1.  Download the appropriate binary for your system (e.g., `vault-kv-search-linux-amd64`).
