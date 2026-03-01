@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/xbglowx/vault-kv-search/compare/v0.4.2...v0.4.3) (2026-03-01)
+
+
+### Bug Fixes
+
+* **ci:** correct bump-homebrew-formula-action name ([c3ec9bf](https://github.com/xbglowx/vault-kv-search/commit/c3ec9bf913f0ba1089f0aa663a7fe5a72bec5336))
+
 ## [0.4.2](https://github.com/xbglowx/vault-kv-search/compare/v0.4.1...v0.4.2) (2026-02-11)
 
 
