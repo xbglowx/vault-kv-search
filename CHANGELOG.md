@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.5](https://github.com/xbglowx/vault-kv-search/compare/v0.4.4...v0.4.5) (2026-04-12)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/hashicorp/vault/api to v1.23.0 ([#208](https://github.com/xbglowx/vault-kv-search/issues/208)) ([f8843b1](https://github.com/xbglowx/vault-kv-search/commit/f8843b1db202e1200dfee6e9ff2d581b6495db54))
+* **deps:** update module github.com/testcontainers/testcontainers-go to v0.42.0 ([#211](https://github.com/xbglowx/vault-kv-search/issues/211)) ([a9e9989](https://github.com/xbglowx/vault-kv-search/commit/a9e998938b0a19ca2f2f75deacd5ab6f5813470c))
+* **deps:** update module golang.org/x/text to v0.36.0 ([#210](https://github.com/xbglowx/vault-kv-search/issues/210)) ([83f332b](https://github.com/xbglowx/vault-kv-search/commit/83f332b3598f87cd14bc3e36b970de821c49dc4a))
+
 ## [0.4.4](https://github.com/xbglowx/vault-kv-search/compare/v0.4.3...v0.4.4) (2026-03-11)
 
 
