@@ -70,7 +70,7 @@ jobs:
         shasum -a 256 vault-kv-search-* > sha256sums.txt
 
     - name: Update Release and Upload Assets
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ needs.release-please.outputs.tag_name }}
         draft: false
