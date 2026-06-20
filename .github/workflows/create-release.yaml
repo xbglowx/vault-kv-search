@@ -85,14 +85,35 @@ jobs:
     needs: [release-please, release]
     if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name }}
     steps:
-    - name: Update Homebrew formula
-      uses: mislav/bump-homebrew-formula-action@v4.1
-      with:
-        formula-name: vault-kv-search
-        homebrew-tap: xbglowx/homebrew-tap
-        tag-name: ${{ needs.release-please.outputs.tag_name }}
-        commit-message: |
-          chore: update {{formulaName}} to {{version}}
+    - name: Bump tap formula
       env:
         COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      run: |
+        set -euo pipefail
+
+        TARBALL="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
+        SHA256=$(curl -fsSL "$TARBALL" | sha256sum | cut -d' ' -f1)
+        echo "tarball=$TARBALL sha256=$SHA256"
+
+        git clone "https://x-access-token:${COMMITTER_TOKEN}@github.com/xbglowx/homebrew-tap.git" tap
+        cd tap
+
+        FORMULA="Formula/vault-kv-search.rb"
+        sed -i -E \
+          -e "s|^(\s*url\s+\").*(\".*)|\1${TARBALL}\2|" \
+          -e "s|^(\s*sha256\s+\").*(\".*)|\1${SHA256}\2|" \
+          "$FORMULA"
+
+        if git diff --quiet; then
+          echo "Formula already up to date"
+          exit 0
+        fi
+
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add "$FORMULA"
+        git commit -m "chore: update vault-kv-search to ${TAG}"
+        git push origin HEAD:main
