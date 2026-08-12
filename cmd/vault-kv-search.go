@@ -208,9 +208,19 @@ func (vc *vaultClient) secretMatch(dirEntry string, fullPath string, searchObjec
 	found := false
 
 	if vc.useRegex {
-		found, _ = regexp.MatchString(vc.searchString, term)
+		found, err := regexp.MatchString(vc.searchString, term)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid regex pattern: %v
+", err)
+			return
+		}
 		if !found && searchObject == "path" {
-			found, _ = regexp.MatchString(vc.searchString, fullPath)
+			found, err = regexp.MatchString(vc.searchString, fullPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Invalid regex pattern: %v
+", err)
+				return
+			}
 		}
 	} else {
 		found = strings.Contains(term, vc.searchString)
