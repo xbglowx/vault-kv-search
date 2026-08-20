@@ -24,9 +24,9 @@ type vaultClient struct {
 	logical       *vault.Logical
 	searchObjects []string
 	searchString  string
+	searchRegex   *regexp.Regexp
 	showSecrets   bool
 	sys           *vault.Sys
-	useRegex      bool
 	wg            sync.WaitGroup
 }
 
@@ -103,7 +103,7 @@ func (vc *vaultClient) getKvVersion(path string) (int, error) {
 }
 
 // VaultKvSearch is the main function
-func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int, kvVersion int, jsonOutput bool, timeoutSeconds int) {
+func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useRegex bool, crawlingDelay int, kvVersion int, jsonOutput bool, timeoutSeconds int) error {
 	config := vault.DefaultConfig()
 	config.Timeout = time.Duration(timeoutSeconds) * time.Second
 
@@ -115,11 +115,7 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 	}
 
 	if err := configureToken(client); err != nil {
-		_, err := fmt.Fprintln(os.Stderr, err)
-		if err != nil {
-			return
-		}
-		os.Exit(1)
+		return err
 	}
 
 	// If the length of positional args is 1, the users didn't specify a search-path and wants to search all available KV stores.
@@ -133,15 +129,21 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 		searchString = args[1]
 	}
 
+	var re *regexp.Regexp
+	if useRegex {
+		if re, err = regexp.Compile(searchString); err != nil {
+			return err
+		}
+	}
 	vc := vaultClient{
 		crawlingDelay: crawlingDelay,
 		jsonOutput:    jsonOutput,
 		logical:       client.Logical(),
 		searchObjects: searchObjects,
 		searchString:  searchString,
+		searchRegex:   re,
 		showSecrets:   showSecrets, // pragma: allowlist secret
 		sys:           client.Sys(),
-		useRegex:      useRegex,
 		wg:            sync.WaitGroup{},
 	}
 
@@ -176,11 +178,11 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 
 		err := vc.readLeafs(startPathInfo.path, searchObjects, startPathInfo.kvVersion)
 		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			return err
 		}
 		vc.wg.Wait()
 	}
+	return nil
 }
 
 func (vc *vaultClient) getAllKvStores() []startPathInfo {
@@ -202,15 +204,15 @@ func (vc *vaultClient) getAllKvStores() []startPathInfo {
 	return info
 }
 
-func (vc *vaultClient) secretMatch(dirEntry string, fullPath string, searchObject string, key string, value string) {
+func (vc *vaultClient) secretMatch(dirEntry string, fullPath string, searchObject string, key string, value string) error {
 	search := map[string]string{"path": dirEntry, "key": key, "value": value}
 	term := search[searchObject]
 	found := false
 
-	if vc.useRegex {
-		found, _ = regexp.MatchString(vc.searchString, term)
+	if vc.searchRegex != nil {
+		found = vc.searchRegex.MatchString(term)
 		if !found && searchObject == "path" {
-			found, _ = regexp.MatchString(vc.searchString, fullPath)
+			found = vc.searchRegex.MatchString(fullPath)
 		}
 	} else {
 		found = strings.Contains(term, vc.searchString)
@@ -223,6 +225,7 @@ func (vc *vaultClient) secretMatch(dirEntry string, fullPath string, searchObjec
 		match := secretMatched{searchObject, fullPath, key, value}
 		vc.showMatch(match)
 	}
+	return nil
 }
 
 func (vc *vaultClient) showMatch(secret secretMatched) {
@@ -248,8 +251,9 @@ func (vc *vaultClient) showMatch(secret secretMatched) {
 	}
 }
 
-func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEntry string, fullPath string, searchObject string) (key string, value string) {
+func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEntry string, fullPath string, searchObject string) error {
 	var valueStringType string
+	var err error
 
 	for key, value := range data {
 		if version > 1 && key == "metadata" {
@@ -266,7 +270,9 @@ func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEn
 		case map[string]interface{}:
 			// Recurse into nested map, but don't return immediately
 			// Continue processing other keys at this level
-			vc.digDeeper(version, v, dirEntry, fullPath, searchObject)
+			if err := vc.digDeeper(version, v, dirEntry, fullPath, searchObject); err != nil {
+				return err
+			}
 			continue
 		// Needed when start from root of the store
 		case []interface{}:
@@ -276,10 +282,13 @@ func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEn
 			os.Exit(1)
 		}
 		// Search matches
-		vc.secretMatch(dirEntry, fullPath, searchObject, key, valueStringType)
+		err = vc.secretMatch(dirEntry, fullPath, searchObject, key, valueStringType)
+		if err != nil {
+			return err
+		}
 	}
 
-	return key, valueStringType
+	return nil
 }
 
 func (vc *vaultClient) readLeafs(path string, searchObjects []string, version int) error {
@@ -332,7 +341,10 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 				if version > 1 {
 					fullPath = strings.Replace(fullPath, "/data", "", 1)
 				}
-				vc.digDeeper(version, secretInfo.Data, dirEntry, fullPath, searchObject)
+				err := vc.digDeeper(version, secretInfo.Data, dirEntry, fullPath, searchObject)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

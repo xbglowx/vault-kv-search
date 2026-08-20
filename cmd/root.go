@@ -61,8 +61,8 @@ available KV stores and the argument specified is the substring you want to sear
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return checkInputs(cmd, args)
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, timeout)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, timeout)
 	},
 	Args:    cobra.RangeArgs(1, 2),
 	Example: "vault-kv-search kv/ foo",

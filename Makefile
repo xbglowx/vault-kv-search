@@ -20,11 +20,11 @@ vault-kv-search: cmd/*.go
 
 .PHONY: test
 test:
-	@go test -v ./...
+	@TESTCONTAINERS_RYUK_DISABLED=true go test -v ./...
 
 .PHONY: test-race
 test-race:
-	@go test -race ./...
+	@TESTCONTAINERS_RYUK_DISABLED=true go test -race ./...
 
 .PHONY: clean
 clean:
