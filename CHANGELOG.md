@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.7](https://github.com/xbglowx/vault-kv-search/compare/v0.4.6...v0.4.7) (2026-08-20)
+
+
+### Bug Fixes
+
+* better error handling ([d569a64](https://github.com/xbglowx/vault-kv-search/commit/d569a647ef6ba863cfc7c08250c67a3dd6d2f6ac))
+* better handling and use for when useRegex is enabled ([1cca4d9](https://github.com/xbglowx/vault-kv-search/commit/1cca4d9f54ff6e41ca50186284540f40ff6d059b))
+* **deps:** update module github.com/testcontainers/testcontainers-go to v0.44.0 ([929618b](https://github.com/xbglowx/vault-kv-search/commit/929618bbb5079f5f357052d87231bd5550bae6a7))
+* **deps:** update module golang.org/x/text to v0.40.0 ([bb2c987](https://github.com/xbglowx/vault-kv-search/commit/bb2c9876f5628321806b4f09145004ca4be0cbba))
+* **deps:** update module golang.org/x/text to v0.41.0 ([#229](https://github.com/xbglowx/vault-kv-search/issues/229)) ([c815e30](https://github.com/xbglowx/vault-kv-search/commit/c815e308bd81df3619e3e72c8d1dec834e76bba4))
+
 ## [0.4.6](https://github.com/xbglowx/vault-kv-search/compare/v0.4.5...v0.4.6) (2026-07-06)
 
 
