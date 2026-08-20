@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -20,6 +19,8 @@ import (
 
 type vaultClient struct {
 	crawlingDelay int
+	err           error
+	errMu         sync.Mutex
 	jsonOutput    bool
 	logical       *vault.Logical
 	searchObjects []string
@@ -28,6 +29,23 @@ type vaultClient struct {
 	showSecrets   bool
 	sys           *vault.Sys
 	wg            sync.WaitGroup
+}
+
+func (vc *vaultClient) setErr(err error) {
+	if err == nil {
+		return
+	}
+	vc.errMu.Lock()
+	defer vc.errMu.Unlock()
+	if vc.err == nil {
+		vc.err = err
+	}
+}
+
+func (vc *vaultClient) getErr() error {
+	vc.errMu.Lock()
+	defer vc.errMu.Unlock()
+	return vc.err
 }
 
 type startPathInfo struct {
@@ -109,9 +127,7 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 
 	client, err := vault.NewClient(config)
 	if err != nil {
-		err = fmt.Errorf("failed to create vault client: %w", err)
-		fmt.Println(err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create vault client: %w", err)
 	}
 
 	if err := configureToken(client); err != nil {
@@ -149,13 +165,15 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 
 	var startPathsInfo []startPathInfo
 	if searchAllKvStores {
-		startPathsInfo = vc.getAllKvStores()
+		startPathsInfo, err = vc.getAllKvStores()
+		if err != nil {
+			return err
+		}
 	} else {
 		if kvVersion == 0 {
 			kvVersion, err = vc.getKvVersion(args[0])
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				return err
 			}
 		}
 		startPathsInfo = append(startPathsInfo, startPathInfo{path: args[0], kvVersion: kvVersion})
@@ -181,16 +199,19 @@ func VaultKvSearch(args []string, searchObjects []string, showSecrets bool, useR
 			return err
 		}
 		vc.wg.Wait()
+		if err := vc.getErr(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (vc *vaultClient) getAllKvStores() []startPathInfo {
+func (vc *vaultClient) getAllKvStores() ([]startPathInfo, error) {
 	var info []startPathInfo
 
 	mountPoints, err := vc.sys.ListMounts()
 	if err != nil {
-		log.Fatalf("Could not get a list of mounts: %v", err)
+		return nil, fmt.Errorf("could not get a list of mounts: %w", err)
 	}
 
 	// Loop through all mountpoints and save only those that are of types kv or generic (old vault KVv1)
@@ -201,7 +222,7 @@ func (vc *vaultClient) getAllKvStores() []startPathInfo {
 		}
 	}
 
-	return info
+	return info, nil
 }
 
 func (vc *vaultClient) secretMatch(dirEntry string, fullPath string, searchObject string, key string, value string) error {
@@ -278,8 +299,7 @@ func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEn
 		case []interface{}:
 		case nil:
 		default:
-			fmt.Printf("I don't know what %T is\n", v)
-			os.Exit(1)
+			return fmt.Errorf("unknown data type %T for key %s", v, key)
 		}
 		// Search matches
 		err = vc.secretMatch(dirEntry, fullPath, searchObject, key, valueStringType)
@@ -292,6 +312,10 @@ func (vc *vaultClient) digDeeper(version int, data map[string]interface{}, dirEn
 }
 
 func (vc *vaultClient) readLeafs(path string, searchObjects []string, version int) error {
+	if err := vc.getErr(); err != nil {
+		return err
+	}
+
 	pathList, err := vc.logical.List(path)
 	if err != nil {
 		return fmt.Errorf("failed to list: %s\n%s", vc.searchString, err)
@@ -310,6 +334,10 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 	}
 
 	for _, x := range pathList.Data["keys"].([]interface{}) {
+		if err := vc.getErr(); err != nil {
+			return err
+		}
+
 		// Slow down a little the crawling
 		time.Sleep(time.Duration(vc.crawlingDelay) * time.Millisecond)
 
@@ -319,10 +347,8 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 			vc.wg.Add(1)
 			go func() {
 				defer vc.wg.Done()
-				err := vc.readLeafs(fullPath, searchObjects, version)
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
+				if err := vc.readLeafs(fullPath, searchObjects, version); err != nil {
+					vc.setErr(err)
 				}
 			}()
 
@@ -333,8 +359,7 @@ func (vc *vaultClient) readLeafs(path string, searchObjects []string, version in
 
 			secretInfo, err := vc.logical.Read(fullPath)
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read %s: %w", fullPath, err)
 			}
 
 			for _, searchObject := range searchObjects {

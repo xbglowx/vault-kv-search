@@ -181,7 +181,9 @@ func TestListSecretsMultipleKVStores(t *testing.T) {
 	}
 
 	// Call the function you want to test
-	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30)
+	if err := VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30); err != nil {
+		t.Fatalf("VaultKvSearch failed: %v", err)
+	}
 
 	// Read from the buffer to get the stdout output
 	if err := w.Close(); err != nil {
@@ -274,7 +276,9 @@ func TestListSecretsMultipleKVStoresWithRegex(t *testing.T) {
 	}
 
 	// Call the function you want to test
-	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30)
+	if err := VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30); err != nil {
+		t.Fatalf("VaultKvSearch failed: %v", err)
+	}
 
 	// Read from the buffer to get the stdout output
 	if err := w.Close(); err != nil {
@@ -366,7 +370,9 @@ func TestNestedMapSearch(t *testing.T) {
 	}
 
 	// Call the function you want to test
-	VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30)
+	if err := VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, 30); err != nil {
+		t.Fatalf("VaultKvSearch failed: %v", err)
+	}
 
 	// Read from the buffer to get the stdout output
 	if err := w.Close(); err != nil {

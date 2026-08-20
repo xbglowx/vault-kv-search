@@ -18,6 +18,10 @@ vault-kv-search: cmd/*.go
 	@go get -v .
 	@GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "$(LDFLAGS)" $(OUTPUTOPTION)
 
+.PHONY: lint
+lint:
+	@golangci-lint run
+
 .PHONY: test
 test:
 	@TESTCONTAINERS_RYUK_DISABLED=true go test -v ./...
