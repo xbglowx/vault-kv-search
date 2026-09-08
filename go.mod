@@ -1,13 +1,13 @@
 module github.com/xbglowx/vault-kv-search
 
-go 1.25.5
+go 1.26.0
 
 require (
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.10.2
 	github.com/testcontainers/testcontainers-go v0.44.0
-	golang.org/x/text v0.41.0
+	golang.org/x/text v0.42.0
 )
 
 require (
