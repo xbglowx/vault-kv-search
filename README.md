@@ -1,3 +1,5 @@
+
+
 # vault-kv-search
 [![Build and Test](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/build-test.yaml) [![CodeQL](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/codeql-analysis.yml) [![golangci-lint](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/xbglowx/vault-kv-search/actions/workflows/golangci-lint.yml)
 
@@ -57,7 +59,7 @@ Flags:
   -c, --crawling-delay int   Crawling delay in milliseconds (default 15)
   -h, --help                 help for vault-kv-search
   -j, --json                 Enable JSON output
-  -k, --kv-version int       KV store version
+  -k, --kv-version int       KV version (1,2). Autodetect if not defined
       --regex                Enable regex search
   -s, --search stringArray   What to search for: path, key, or value (default [value])
       --show-secrets         Show secret values in output
