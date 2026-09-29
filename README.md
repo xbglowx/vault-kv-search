@@ -32,6 +32,7 @@
 ```sh
 brew install xbglowx/tap/vault-kv-search
 ```
+Homebrew keeps the formula updated when a new release is published.
 
 ### Pre-compiled Binaries
 You can download the latest pre-compiled binaries for your operating system from the [**GitHub Releases**](https://github.com/xbglowx/vault-kv-search/releases) page.
@@ -56,15 +57,14 @@ Usage:
   vault-kv-search [search-path] <search-string> [flags]
 
 Flags:
-  -c, --crawling-delay int   Crawling delay in milliseconds (default 15)
-  -h, --help                 help for vault-kv-search
-  -j, --json                 Enable JSON output
-  -k, --kv-version int       KV version (1,2). Autodetect if not defined
-      --regex                Enable regex search
-  -s, --search stringArray   What to search for: path, key, or value (default [value])
-      --show-secrets         Show secret values in output
-  -t, --timeout int          Vault client timeout in seconds (default 30)
-      --version              version for vault-kv-search
+  -d, --delay int        Crawling delay in millisconds (default 15)
+  -h, --help             help for vault-kv-search
+  -j, --json             Output as JSON
+  -k, --kv-version int   KV version (1,2). Autodetect if not defined
+  -r, --regex            Enable searching regex substring
+      --search strings   Which Vault objects to search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or once using format CSV. Defaults to 'value' (default [value])
+  -s, --showsecrets      Show secrets values
+  -t, --timeout int      Vault client timeout in seconds (default 30)
 ```
 
 ### Examples
@@ -102,7 +102,7 @@ Flags:
 
 7.  **Show the secret value in the output:**
     ```sh
-    vault-kv-search --show-secrets secret/ "password123"
+    vault-kv-search --showsecrets secret/ "password123"
     ```
 
 8.  **Output results in JSON format:**
@@ -114,7 +114,7 @@ Flags:
 
 ### Building from Source
 **Prerequisites:**
-- Go 1.24+
+- Go version specified in [`go.mod`](go.mod)
 - Make
 
 To build the binary from the source code:
