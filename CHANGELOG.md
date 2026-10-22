@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/xbglowx/vault-kv-search/compare/v0.5.0...v0.6.0) (2026-10-22)
+
+
+### Features
+
+* add CLI flags and help docs for Vault address, token, and TLS ([52bed20](https://github.com/xbglowx/vault-kv-search/commit/52bed200bb1295f95d04d425d1ee9d7523e7efe7))
+
 ## [0.5.0](https://github.com/xbglowx/vault-kv-search/compare/v0.4.9...v0.5.0) (2026-10-22)
 
 
