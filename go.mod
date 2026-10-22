@@ -9,7 +9,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.44.0
 	golang.org/x/term v0.47.0
 	golang.org/x/text v0.43.0
-	golang.org/x/time v0.14.0
+	golang.org/x/time v0.16.0
 )
 
 require (
