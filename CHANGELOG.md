@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/xbglowx/vault-kv-search/compare/v0.4.9...v0.5.0) (2026-10-22)
+
+
+### Features
+
+* add CLI UX, concurrency, and interactive mode improvements ([de1debd](https://github.com/xbglowx/vault-kv-search/commit/de1debddda18338016bd1259d7cc677bb2e146eb))
+
+
+### Bug Fixes
+
+* **deps:** update module golang.org/x/term to v0.47.0 ([ec91c27](https://github.com/xbglowx/vault-kv-search/commit/ec91c27a24e9cb0c8f6909b6808647f5ef10bf14))
+* **deps:** update module golang.org/x/time to v0.16.0 ([55650c4](https://github.com/xbglowx/vault-kv-search/commit/55650c47fec204e10e389356392afbdd885e263d))
+
 ## [0.4.9](https://github.com/xbglowx/vault-kv-search/compare/v0.4.8...v0.4.9) (2026-10-10)
 
 
