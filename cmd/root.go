@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -59,6 +60,14 @@ func checkInputs(cmd *cobra.Command, args []string) error {
 		return errors.New("concurrency must be at least 1")
 	}
 
+	if cmd.Flags().Changed("vault-addr") && strings.TrimSpace(vaultAddr) == "" {
+		return errors.New("vault-addr cannot be empty")
+	}
+
+	if cmd.Flags().Changed("vault-token") && strings.TrimSpace(vaultToken) == "" {
+		return errors.New("vault-token cannot be empty")
+	}
+
 	if len(args) == 0 && !interactive && !isTerminal(os.Stdin) {
 		return errors.New("requires at least 1 arg(s), only received 0")
 	}
@@ -78,7 +87,12 @@ var RootCmd = &cobra.Command{
 
 If only one positional argument is given, it is assumed you want to search all 
 available KV stores and the argument specified is the substring you want to search for.
-When run with no positional arguments in an interactive terminal, a guided prompt is launched.`,
+When run with no positional arguments in an interactive terminal, a guided prompt is launched.
+
+Authentication and Connection:
+  Vault address: --vault-addr (-a) flag or VAULT_ADDR environment variable
+  Vault token:   --vault-token flag (literal token, @file, or file path), VAULT_TOKEN environment variable, or ~/.vault-token
+  TLS verify:    --skip-verify flag or VAULT_SKIP_VERIFY environment variable`,
 
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return checkInputs(cmd, args)
@@ -100,10 +114,14 @@ When run with no positional arguments in an interactive terminal, a guided promp
 			TimeoutSeconds: timeout,
 			NoColor:        noColor,
 			ExitCode:       exitCode,
+			VaultAddr:      vaultAddr,
+			VaultToken:     vaultToken,
+			SkipVerify:     skipVerify,
+			SkipVerifySet:  cmd.Flags().Changed("skip-verify"),
 		}
 
 		if len(opts.Args) == 0 || interactive {
-			mounts := discoverMountsForInteractive(timeout)
+			mounts := discoverMountsForInteractive(opts)
 			if err := runInteractivePrompt(os.Stdin, os.Stderr, &opts, mounts); err != nil {
 				return err
 			}
@@ -144,8 +162,11 @@ var (
 	noColor       bool
 	searchObjects []string
 	showSecrets   bool
+	skipVerify    bool
 	timeout       int
 	useRegex      bool
+	vaultAddr     string
+	vaultToken    string
 )
 
 func init() {
@@ -161,6 +182,9 @@ func init() {
 		"search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or "+
 		"once using format CSV. Defaults to 'value'")
 	RootCmd.Flags().BoolVarP(&showSecrets, "showsecrets", "s", false, "Show secrets values")
+	RootCmd.Flags().BoolVar(&skipVerify, "skip-verify", false, "Skip TLS certificate verification (overrides VAULT_SKIP_VERIFY)")
 	RootCmd.Flags().BoolVarP(&useRegex, "regex", "r", false, "Enable searching regex substring")
 	RootCmd.Flags().IntVarP(&timeout, "timeout", "t", 30, "Vault client timeout in seconds")
+	RootCmd.Flags().StringVarP(&vaultAddr, "vault-addr", "a", "", "Vault server address (overrides VAULT_ADDR)")
+	RootCmd.Flags().StringVar(&vaultToken, "vault-token", "", "Vault authentication token, @file, or file path (overrides VAULT_TOKEN and ~/.vault-token)")
 }

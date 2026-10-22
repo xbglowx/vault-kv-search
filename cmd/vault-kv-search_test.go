@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -442,7 +443,12 @@ func TestIgnoreCaseAndExitCode(t *testing.T) {
 	t.Setenv("VAULT_ADDR", client.Address())
 	t.Setenv("VAULT_SKIP_VERIFY", "true")
 
-	discovered := discoverMountsForInteractive(30)
+	discovered := discoverMountsForInteractive(SearchOptions{
+		TimeoutSeconds: 30,
+		VaultAddr:      client.Address(),
+		VaultToken:     client.Token(),
+		SkipVerify:     true,
+	})
 	if len(discovered) == 0 {
 		t.Error("Expected discoverMountsForInteractive to return at least 1 mount")
 	}
@@ -934,15 +940,26 @@ func TestInputValidationAndHelpers(t *testing.T) {
 	origSearchObjects := searchObjects
 	origConcurrency := concurrency
 	origInteractive := interactive
+	origVaultAddr := vaultAddr
+	origVaultToken := vaultToken
 	defer func() {
 		searchObjects = origSearchObjects
 		concurrency = origConcurrency
 		interactive = origInteractive
+		vaultAddr = origVaultAddr
+		vaultToken = origVaultToken
 	}()
 
 	cmd := &cobra.Command{}
+	cmd.Flags().StringVarP(&vaultAddr, "vault-addr", "a", "", "")
+	cmd.Flags().StringVar(&vaultToken, "vault-token", "", "")
 	var cmdOut bytes.Buffer
 	cmd.SetOut(&cmdOut)
+
+	searchObjects = []string{"invalid"}
+	if err := checkInputs(cmd, []string{"foo"}); err == nil {
+		t.Error("Expected error for invalid searchObjects in checkInputs")
+	}
 
 	searchObjects = []string{"value"}
 	concurrency = 0
@@ -951,6 +968,17 @@ func TestInputValidationAndHelpers(t *testing.T) {
 	}
 
 	concurrency = 4
+	_ = cmd.Flags().Set("vault-addr", "   ")
+	if err := checkInputs(cmd, []string{"foo"}); err == nil {
+		t.Error("Expected error when --vault-addr is empty")
+	}
+	_ = cmd.Flags().Set("vault-addr", "https://vault.example.com:8200")
+	_ = cmd.Flags().Set("vault-token", "   ")
+	if err := checkInputs(cmd, []string{"foo"}); err == nil {
+		t.Error("Expected error when --vault-token is empty")
+	}
+	_ = cmd.Flags().Set("vault-token", "my-token")
+
 	interactive = false
 	if err := checkInputs(cmd, []string{}); err == nil {
 		t.Error("Expected error when 0 args and non-interactive")
@@ -1040,5 +1068,111 @@ func TestInputValidationAndHelpers(t *testing.T) {
 	}
 	if elapsed := time.Since(fatalStart); elapsed > 2*time.Second {
 		t.Errorf("Expected fatal shutdown to cancel in-flight requests promptly, took %s", elapsed)
+	}
+
+	tmpDir := t.TempDir()
+	tokenFile := filepath.Join(tmpDir, "vault-token")
+	if err := os.WriteFile(tokenFile, []byte("  file-secret-token\n"), 0o600); err != nil {
+		t.Fatalf("Failed to write temp token file: %v", err)
+	}
+	emptyTokenFile := filepath.Join(tmpDir, "empty-token")
+	if err := os.WriteFile(emptyTokenFile, []byte("   \n"), 0o600); err != nil {
+		t.Fatalf("Failed to write empty token file: %v", err)
+	}
+
+	if got, err := resolveTokenInput("hvs.literal-123"); err != nil || got != "hvs.literal-123" {
+		t.Errorf("Expected literal token, got %q (err: %v)", got, err)
+	}
+	if got, err := resolveTokenInput("@" + tokenFile); err != nil || got != "file-secret-token" {
+		t.Errorf("Expected @file token, got %q (err: %v)", got, err)
+	}
+	if got, err := resolveTokenInput(tokenFile); err != nil || got != "file-secret-token" {
+		t.Errorf("Expected path-prefix token, got %q (err: %v)", got, err)
+	}
+
+	t.Setenv("HOME", tmpDir)
+	t.Setenv("USERPROFILE", tmpDir)
+	homeTokenFile := filepath.Join(tmpDir, ".custom-token")
+	if err := os.WriteFile(homeTokenFile, []byte("home-token-val\n"), 0o600); err != nil {
+		t.Fatalf("Failed to write home token file: %v", err)
+	}
+	if got, err := resolveTokenInput("~/.custom-token"); err != nil || got != "home-token-val" {
+		t.Errorf("Expected ~/ token file resolution, got %q (err: %v)", got, err)
+	}
+	if got, err := resolveTokenInput("@~/.custom-token"); err != nil || got != "home-token-val" {
+		t.Errorf("Expected @~/ token file resolution, got %q (err: %v)", got, err)
+	}
+	if !isTokenFilePath(`C:\Users\alice\vault-token`) || !isTokenFilePath(`\\server\share\vault-token`) {
+		t.Error("Expected Windows drive and UNC paths to be recognized as token file paths")
+	}
+
+	if got, err := expandHomePath("~"); err != nil || got != tmpDir {
+		t.Errorf("Expected expandHomePath(\"~\") = %q, got %q (err: %v)", tmpDir, got, err)
+	}
+
+	for _, badInput := range []string{"", "   ", "@", "@   ", "@" + emptyTokenFile, emptyTokenFile, "@/nonexistent/token/path"} {
+		if _, err := resolveTokenInput(badInput); err == nil {
+			t.Errorf("Expected error for resolveTokenInput(%q), got nil", badInput)
+		}
+	}
+
+	if _, err := newVaultClient(SearchOptions{VaultAddr: srv.URL, VaultToken: "@/nonexistent/token"}); err == nil {
+		t.Error("Expected error when newVaultClient receives nonexistent token file")
+	}
+
+	t.Setenv("VAULT_TOKEN", "")
+	if _, err := newVaultClient(SearchOptions{VaultAddr: srv.URL}); err == nil {
+		t.Error("Expected error when neither VAULT_TOKEN nor ~/.vault-token exists")
+	}
+	defaultTokenHelper := filepath.Join(tmpDir, ".vault-token")
+	if err := os.WriteFile(defaultTokenHelper, []byte("   \n"), 0o600); err != nil {
+		t.Fatalf("Failed to write empty ~/.vault-token: %v", err)
+	}
+	if _, err := newVaultClient(SearchOptions{VaultAddr: srv.URL}); err == nil {
+		t.Error("Expected error when ~/.vault-token is empty")
+	}
+	if err := os.WriteFile(defaultTokenHelper, []byte("helper-token-val\n"), 0o600); err != nil {
+		t.Fatalf("Failed to write ~/.vault-token: %v", err)
+	}
+	helperClient, err := newVaultClient(SearchOptions{VaultAddr: srv.URL})
+	if err != nil || helperClient.Token() != "helper-token-val" {
+		t.Errorf("Expected ~/.vault-token to be loaded, got token=%q err=%v", helperClient.Token(), err)
+	}
+
+	t.Setenv("VAULT_ADDR", "http://127.0.0.1:1")
+	t.Setenv("VAULT_TOKEN", "wrong-env-token")
+	vcClient, err := newVaultClient(SearchOptions{
+		VaultAddr:  srv.URL,
+		VaultToken: "@" + tokenFile,
+		SkipVerify: true,
+	})
+	if err != nil {
+		t.Fatalf("Expected newVaultClient to succeed with flag overrides, got: %v", err)
+	}
+	if vcClient.Address() != srv.URL {
+		t.Errorf("Expected client address %q, got %q", srv.URL, vcClient.Address())
+	}
+	if vcClient.Token() != "file-secret-token" {
+		t.Errorf("Expected client token 'file-secret-token', got %q", vcClient.Token())
+	}
+
+	tlsSrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"keys":[]}}`))
+	}))
+	defer tlsSrv.Close()
+
+	t.Setenv("VAULT_SKIP_VERIFY", "true")
+	strictClient, err := newVaultClient(SearchOptions{
+		VaultAddr:     tlsSrv.URL,
+		VaultToken:    "test-token",
+		SkipVerify:    false,
+		SkipVerifySet: true,
+	})
+	if err != nil {
+		t.Fatalf("Expected newVaultClient with explicit SkipVerify=false to succeed, got: %v", err)
+	}
+	if _, err := strictClient.Logical().List("secret/metadata/"); err == nil {
+		t.Error("Expected TLS verification failure when SkipVerify=false overrides VAULT_SKIP_VERIFY=true")
 	}
 }

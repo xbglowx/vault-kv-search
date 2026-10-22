@@ -8,23 +8,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
-
-	vault "github.com/hashicorp/vault/api"
 )
 
-func discoverMountsForInteractive(timeoutSeconds int) []startPathInfo {
-	if timeoutSeconds <= 0 {
-		timeoutSeconds = 30
-	}
-	config := vault.DefaultConfig()
-	config.Timeout = time.Duration(timeoutSeconds) * time.Second
-
-	client, err := vault.NewClient(config)
+func discoverMountsForInteractive(opts SearchOptions) []startPathInfo {
+	client, err := newVaultClient(opts)
 	if err != nil {
-		return nil
-	}
-	if err := configureToken(client); err != nil {
 		return nil
 	}
 
