@@ -18,31 +18,52 @@ limitations under the License.
 
 import (
 	"fmt"
+	"os"
+	"slices"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-func checkInputs(cmd *cobra.Command, args []string) error {
+func validateSearchObjects(objects []string) error {
+	if len(objects) == 0 {
+		return errors.New("at least one search target must be specified")
+	}
 	searchObjectChoices := map[string]struct{}{
 		"key":   {},
 		"value": {},
 		"path":  {},
 	}
 
-	keys := []string{}
+	keys := make([]string, 0, len(searchObjectChoices))
 	for key := range searchObjectChoices {
 		keys = append(keys, key)
 	}
+	slices.Sort(keys)
 
-	for _, s := range searchObjects {
+	for _, s := range objects {
 		if _, ok := searchObjectChoices[s]; !ok {
 			errorMsg := fmt.Sprintf("%s is not a valid flag choice. Choices are %v", s, keys)
 			return errors.New(errorMsg)
 		}
 	}
+	return nil
+}
 
-	if len(args) == 1 {
+func checkInputs(cmd *cobra.Command, args []string) error {
+	if err := validateSearchObjects(searchObjects); err != nil {
+		return err
+	}
+
+	if concurrency < 1 {
+		return errors.New("concurrency must be at least 1")
+	}
+
+	if len(args) == 0 && !interactive && !isTerminal(os.Stdin) {
+		return errors.New("requires at least 1 arg(s), only received 0")
+	}
+
+	if len(args) == 1 && !interactive {
 		cmd.Printf("!!Warning!! searching all KV stores, since only one positional argument was specified\n")
 	}
 
@@ -56,28 +77,71 @@ var RootCmd = &cobra.Command{
 	Long: `Recursively search Hashicorp Vault for substring
 
 If only one positional argument is given, it is assumed you want to search all 
-available KV stores and the argument specified is the substring you want to search for`,
+available KV stores and the argument specified is the substring you want to search for.
+When run with no positional arguments in an interactive terminal, a guided prompt is launched.`,
 
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return checkInputs(cmd, args)
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return VaultKvSearch(args, searchObjects, showSecrets, useRegex, crawlingDelay, kvVersion, jsonOutput, timeout)
+		cmd.SilenceErrors = false
+		cmd.SilenceUsage = false
+
+		opts := SearchOptions{
+			Args:           args,
+			SearchObjects:  searchObjects,
+			ShowSecrets:    showSecrets,
+			UseRegex:       useRegex,
+			IgnoreCase:     ignoreCase,
+			CrawlingDelay:  crawlingDelay,
+			Concurrency:    concurrency,
+			KvVersion:      kvVersion,
+			JSONOutput:     jsonOutput,
+			TimeoutSeconds: timeout,
+			NoColor:        noColor,
+			ExitCode:       exitCode,
+		}
+
+		if len(opts.Args) == 0 || interactive {
+			mounts := discoverMountsForInteractive(timeout)
+			if err := runInteractivePrompt(os.Stdin, os.Stderr, &opts, mounts); err != nil {
+				return err
+			}
+			if len(opts.Args) == 1 {
+				cmd.Printf("!!Warning!! searching all KV stores, since only one positional argument was specified\n")
+			}
+		}
+
+		err := VaultKvSearchWithOptions(opts)
+		if errors.Is(err, ErrNoMatches) {
+			cmd.SilenceErrors = true
+			cmd.SilenceUsage = true
+		}
+		return err
 	},
-	Args:    cobra.RangeArgs(1, 2),
+	Args:    cobra.RangeArgs(0, 2),
 	Example: "vault-kv-search kv/ foo",
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	cobra.CheckErr(RootCmd.Execute())
+	err := RootCmd.Execute()
+	if errors.Is(err, ErrNoMatches) {
+		os.Exit(1)
+	}
+	cobra.CheckErr(err)
 }
 
 var (
+	concurrency   int
 	crawlingDelay int
+	exitCode      bool
+	ignoreCase    bool
+	interactive   bool
 	jsonOutput    bool
 	kvVersion     int
+	noColor       bool
 	searchObjects []string
 	showSecrets   bool
 	timeout       int
@@ -85,9 +149,14 @@ var (
 )
 
 func init() {
-	RootCmd.Flags().IntVarP(&crawlingDelay, "delay", "d", 15, "Crawling delay in millisconds")
+	RootCmd.Flags().IntVarP(&concurrency, "concurrency", "c", defaultConcurrency, "Number of concurrent Vault workers")
+	RootCmd.Flags().IntVarP(&crawlingDelay, "delay", "d", 15, "Crawling delay in milliseconds")
+	RootCmd.Flags().BoolVarP(&exitCode, "exit-code", "e", false, "Return exit code 1 when no matches are found")
+	RootCmd.Flags().BoolVarP(&ignoreCase, "ignore-case", "i", false, "Perform case-insensitive matching")
+	RootCmd.Flags().BoolVar(&interactive, "interactive", false, "Launch interactive guided search prompt")
 	RootCmd.Flags().BoolVarP(&jsonOutput, "json", "j", false, "Output as JSON")
 	RootCmd.Flags().IntVarP(&kvVersion, "kv-version", "k", 0, "KV version (1,2). Autodetect if not defined")
+	RootCmd.Flags().BoolVar(&noColor, "no-color", false, "Disable colored output and match highlighting")
 	RootCmd.Flags().StringSliceVar(&searchObjects, "search", []string{"value"}, "Which Vault objects to "+
 		"search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or "+
 		"once using format CSV. Defaults to 'value'")
