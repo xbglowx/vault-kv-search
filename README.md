@@ -48,12 +48,12 @@ You can download the latest pre-compiled binaries for your operating system from
 ## Usage
 
 ### Prerequisites
-The tool requires a Vault server address and authentication token (via `VAULT_TOKEN` or `~/.vault-token`):
+The tool requires a Vault server address and authentication token, configured via CLI flags (`--vault-addr`, `--vault-token`), environment variables (`VAULT_ADDR`, `VAULT_TOKEN`), or `~/.vault-token`:
 ```sh
 export VAULT_ADDR="https://your-vault-server:8200"
 export VAULT_TOKEN="s.YourVaultToken"
 ```
-You may also set `VAULT_SKIP_VERIFY=true` if your Vault instance uses a self-signed certificate, and `NO_COLOR=1` (or pass `--no-color`) to disable ANSI color output.
+You may also pass `--skip-verify` or set `VAULT_SKIP_VERIFY=true` if your Vault instance uses a self-signed certificate, and `NO_COLOR=1` (or pass `--no-color`) to disable ANSI color output.
 
 ### Command Flags
 ```
@@ -61,19 +61,22 @@ Usage:
   vault-kv-search [flags] [search-path] substring
 
 Flags:
-  -c, --concurrency int   Number of concurrent Vault workers (default 10)
-  -d, --delay int         Crawling delay in milliseconds (default 15)
-  -e, --exit-code         Return exit code 1 when no matches are found
-  -h, --help              help for vault-kv-search
-  -i, --ignore-case       Perform case-insensitive matching
-      --interactive       Launch interactive guided search prompt
-  -j, --json              Output as JSON
-  -k, --kv-version int    KV version (1,2). Autodetect if not defined
-      --no-color          Disable colored output and match highlighting
-  -r, --regex             Enable searching regex substring
-      --search strings    Which Vault objects to search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or once using format CSV. Defaults to 'value' (default [value])
-  -s, --showsecrets       Show secrets values
-  -t, --timeout int       Vault client timeout in seconds (default 30)
+  -c, --concurrency int      Number of concurrent Vault workers (default 10)
+  -d, --delay int            Crawling delay in milliseconds (default 15)
+  -e, --exit-code            Return exit code 1 when no matches are found
+  -h, --help                 help for vault-kv-search
+  -i, --ignore-case          Perform case-insensitive matching
+      --interactive          Launch interactive guided search prompt
+  -j, --json                 Output as JSON
+  -k, --kv-version int       KV version (1,2). Autodetect if not defined
+      --no-color             Disable colored output and match highlighting
+  -r, --regex                Enable searching regex substring
+      --search strings       Which Vault objects to search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or once using format CSV. Defaults to 'value' (default [value])
+  -s, --showsecrets          Show secrets values
+      --skip-verify          Skip TLS certificate verification (overrides VAULT_SKIP_VERIFY)
+  -t, --timeout int          Vault client timeout in seconds (default 30)
+  -a, --vault-addr string    Vault server address (overrides VAULT_ADDR)
+      --vault-token string   Vault authentication token, @file, or file path (overrides VAULT_TOKEN and ~/.vault-token)
 ```
 
 ### Examples
@@ -132,6 +135,11 @@ Flags:
 11. **Launch interactive guided search prompt:**
     ```sh
     vault-kv-search --interactive
+    ```
+
+12. **Specify Vault address and token via CLI flags (literal token, `@file`, or file path):**
+    ```sh
+    vault-kv-search -a https://vault.example.com:8200 --vault-token @~/.vault-token-prod secret/ "db-host"
     ```
 
 ## Development

@@ -47,6 +47,10 @@ type SearchOptions struct {
 	NoColor        bool
 	ForceColor     bool
 	ExitCode       bool
+	VaultAddr      string
+	VaultToken     string
+	SkipVerify     bool
+	SkipVerifySet  bool
 }
 
 type searchTask struct {
@@ -298,6 +302,83 @@ func isPermissionDenied(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "code: 403")
 }
 
+func isWindowsAbsOrUNC(s string) bool {
+	if strings.HasPrefix(s, `\\`) {
+		return true
+	}
+	if len(s) >= 3 && s[1] == ':' && (s[2] == '\\' || s[2] == '/') {
+		c := s[0]
+		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+	}
+	return false
+}
+
+func isTokenFilePath(s string) bool {
+	s = strings.TrimSpace(s)
+	return filepath.IsAbs(s) ||
+		isWindowsAbsOrUNC(s) ||
+		strings.HasPrefix(s, "/") ||
+		strings.HasPrefix(s, "./") ||
+		strings.HasPrefix(s, "../") ||
+		strings.HasPrefix(s, "~/") ||
+		strings.HasPrefix(s, `.\`) ||
+		strings.HasPrefix(s, `..\`) ||
+		strings.HasPrefix(s, `~\`) ||
+		s == "~"
+}
+
+func expandHomePath(path string) (string, error) {
+	if path == "~" || strings.HasPrefix(path, "~/") || strings.HasPrefix(path, `~\`) {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("cannot determine home directory for token file %s: %w", path, err)
+		}
+		if path == "~" {
+			return home, nil
+		}
+		return filepath.Join(home, path[2:]), nil
+	}
+	return path, nil
+}
+
+func readTokenFromFile(path string) (string, error) {
+	resolvedPath, err := expandHomePath(path)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := os.ReadFile(resolvedPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read token file %s: %w", resolvedPath, err)
+	}
+
+	token := strings.TrimSpace(string(data))
+	if token == "" {
+		return "", fmt.Errorf("token file %s exists but is empty", resolvedPath)
+	}
+	return token, nil
+}
+
+func resolveTokenInput(raw string) (string, error) {
+	if strings.HasPrefix(raw, "@") {
+		path := strings.TrimSpace(strings.TrimPrefix(raw, "@"))
+		if path == "" {
+			return "", errors.New("token file path after '@' cannot be empty")
+		}
+		return readTokenFromFile(path)
+	}
+
+	if isTokenFilePath(raw) {
+		return readTokenFromFile(strings.TrimSpace(raw))
+	}
+
+	token := strings.TrimSpace(raw)
+	if token == "" {
+		return "", errors.New("vault token cannot be empty")
+	}
+	return token, nil
+}
+
 // configureToken tries to configure the Vault token on the client.
 //
 // Order:
@@ -333,6 +414,49 @@ func configureToken(client *vault.Client) error {
 
 	client.SetToken(token)
 	return nil
+}
+
+func newVaultClient(opts SearchOptions) (*vault.Client, error) {
+	timeoutSeconds := opts.TimeoutSeconds
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = 30
+	}
+
+	config := vault.DefaultConfig()
+	config.Timeout = time.Duration(timeoutSeconds) * time.Second
+	if addr := strings.TrimSpace(opts.VaultAddr); addr != "" {
+		config.Address = addr
+	}
+	if opts.SkipVerify || opts.SkipVerifySet {
+		if err := config.ConfigureTLS(&vault.TLSConfig{Insecure: opts.SkipVerify}); err != nil {
+			return nil, fmt.Errorf("failed to configure TLS skip-verify: %w", err)
+		}
+		if config.HttpClient != nil {
+			if transport, ok := config.HttpClient.Transport.(*http.Transport); ok && transport.TLSClientConfig != nil {
+				transport.TLSClientConfig.InsecureSkipVerify = opts.SkipVerify
+			}
+		}
+	}
+
+	client, err := vault.NewClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create vault client: %w", err)
+	}
+
+	if opts.VaultToken != "" {
+		token, err := resolveTokenInput(opts.VaultToken)
+		if err != nil {
+			return nil, err
+		}
+		client.SetToken(token)
+		return client, nil
+	}
+
+	if err := configureToken(client); err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
 
 func (vc *vaultClient) getKvVersion(path string) (int, error) {
@@ -395,20 +519,8 @@ func VaultKvSearchWithOptions(opts SearchOptions) error {
 		return err
 	}
 
-	timeoutSeconds := opts.TimeoutSeconds
-	if timeoutSeconds <= 0 {
-		timeoutSeconds = 30
-	}
-
-	config := vault.DefaultConfig()
-	config.Timeout = time.Duration(timeoutSeconds) * time.Second
-
-	client, err := vault.NewClient(config)
+	client, err := newVaultClient(opts)
 	if err != nil {
-		return fmt.Errorf("failed to create vault client: %w", err)
-	}
-
-	if err := configureToken(client); err != nil {
 		return err
 	}
 
