@@ -20,7 +20,11 @@
 ## Features
 - **Recursive Search:** Traverses nested paths in Vault to find secrets.
 - **Multi-Target Search:** Search within secret values, keys, or paths.
-- **Regex Support:** Use regular expressions for powerful and flexible search patterns.
+- **Regex & Case-Insensitive Support:** Use regular expressions (`-r`) and case-insensitive matching (`-i`) for flexible search patterns.
+- **Bounded Concurrency & Rate Limiting:** Configurable worker pool (`-c`) and crawling delay (`-d`) for fast, safe searches.
+- **Graceful Permission Handling:** Automatically skips paths returning `403 Permission Denied` and reports skipped counts in the summary.
+- **Match Highlighting:** Highlights matched substrings in terminal output (respecting `NO_COLOR` and `--no-color`).
+- **Interactive Guided Prompt:** Run with no arguments in a terminal (or `--interactive`) for a guided store and query prompt.
 - **KV v1 and v2 Support:** Works seamlessly with both versions of the KV secrets engine.
 - **Multiple Output Formats:** Choose between human-readable text and structured `json` output.
 - **Cross-Platform:** Builds for Linux, macOS, and Windows.
@@ -44,27 +48,32 @@ You can download the latest pre-compiled binaries for your operating system from
 ## Usage
 
 ### Prerequisites
-The tool requires the following environment variables to be set to authenticate with your Vault server:
+The tool requires a Vault server address and authentication token (via `VAULT_TOKEN` or `~/.vault-token`):
 ```sh
 export VAULT_ADDR="https://your-vault-server:8200"
 export VAULT_TOKEN="s.YourVaultToken"
 ```
-You may also need `VAULT_SKIP_VERIFY=true` if your Vault instance uses a self-signed certificate.
+You may also set `VAULT_SKIP_VERIFY=true` if your Vault instance uses a self-signed certificate, and `NO_COLOR=1` (or pass `--no-color`) to disable ANSI color output.
 
 ### Command Flags
 ```
 Usage:
-  vault-kv-search [search-path] <search-string> [flags]
+  vault-kv-search [flags] [search-path] substring
 
 Flags:
-  -d, --delay int        Crawling delay in millisconds (default 15)
-  -h, --help             help for vault-kv-search
-  -j, --json             Output as JSON
-  -k, --kv-version int   KV version (1,2). Autodetect if not defined
-  -r, --regex            Enable searching regex substring
-      --search strings   Which Vault objects to search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or once using format CSV. Defaults to 'value' (default [value])
-  -s, --showsecrets      Show secrets values
-  -t, --timeout int      Vault client timeout in seconds (default 30)
+  -c, --concurrency int   Number of concurrent Vault workers (default 10)
+  -d, --delay int         Crawling delay in milliseconds (default 15)
+  -e, --exit-code         Return exit code 1 when no matches are found
+  -h, --help              help for vault-kv-search
+  -i, --ignore-case       Perform case-insensitive matching
+      --interactive       Launch interactive guided search prompt
+  -j, --json              Output as JSON
+  -k, --kv-version int    KV version (1,2). Autodetect if not defined
+      --no-color          Disable colored output and match highlighting
+  -r, --regex             Enable searching regex substring
+      --search strings    Which Vault objects to search against. Choices are any and all of the following 'key,value,path'. Can be specified multiple times or once using format CSV. Defaults to 'value' (default [value])
+  -s, --showsecrets       Show secrets values
+  -t, --timeout int       Vault client timeout in seconds (default 30)
 ```
 
 ### Examples
@@ -108,6 +117,21 @@ Flags:
 8.  **Output results in JSON format:**
     ```sh
     vault-kv-search --json secret/ "user@example.com"
+    ```
+
+9.  **Case-insensitive search with custom worker concurrency:**
+    ```sh
+    vault-kv-search -i -c 20 secret/ "apikey"
+    ```
+
+10. **Return non-zero exit code (`1`) when no matches are found (for scripts/CI):**
+    ```sh
+    vault-kv-search --exit-code secret/ "deprecated-host"
+    ```
+
+11. **Launch interactive guided search prompt:**
+    ```sh
+    vault-kv-search --interactive
     ```
 
 ## Development

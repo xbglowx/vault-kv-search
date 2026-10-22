@@ -49,14 +49,14 @@ Always reference these instructions first and fallback to search or bash command
 ```
 /
 ├── cmd/                          # Command implementations
+│   ├── interactive.go            # Interactive guided search prompt
 │   ├── root.go                   # CLI root command and flags
-│   ├── vault-kv-search.go        # Main search logic
+│   ├── vault-kv-search.go        # Main search logic and concurrency
 │   ├── vault-kv-search_test.go   # Test suite
 │   └── version.go                # Version command
 ├── main.go                       # Entry point
 ├── Makefile                      # Build targets
 ├── go.mod                        # Go module definition
-├── test-with-docker.sh           # Automated test script
 └── .github/workflows/            # CI/CD pipelines
     ├── build-test.yaml           # Build and test workflow
     ├── golangci-lint.yml         # Linting workflow
@@ -78,7 +78,7 @@ Always reference these instructions first and fallback to search or bash command
 5. Validate with build and test scenarios
 
 ### Modifying search logic:
-1. Edit `cmd/vault-kv-search.go` - main logic in `VaultKvSearch()` function
+1. Edit `cmd/vault-kv-search.go` - main logic in `VaultKvSearchWithOptions()` (and `VaultKvSearch()` wrapper)
 2. Test changes against both KV v1 and v2 engines
 3. Ensure JSON and text output formats work correctly
 4. Add test cases in `cmd/vault-kv-search_test.go`
