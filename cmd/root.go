@@ -68,7 +68,7 @@ func checkInputs(cmd *cobra.Command, args []string) error {
 		return errors.New("vault-token cannot be empty")
 	}
 
-	if len(args) == 0 && !interactive && !isTerminal(os.Stdin) {
+	if len(args) == 0 && !interactive {
 		return errors.New("requires at least 1 arg(s), only received 0")
 	}
 
@@ -87,7 +87,7 @@ var RootCmd = &cobra.Command{
 
 If only one positional argument is given, it is assumed you want to search all 
 available KV stores and the argument specified is the substring you want to search for.
-When run with no positional arguments in an interactive terminal, a guided prompt is launched.
+Use -I / --interactive to launch a guided search prompt.
 
 Authentication and Connection:
   Vault address: --vault-addr (-a) flag or VAULT_ADDR environment variable
@@ -120,7 +120,7 @@ Authentication and Connection:
 			SkipVerifySet:  cmd.Flags().Changed("skip-verify"),
 		}
 
-		if len(opts.Args) == 0 || interactive {
+		if interactive {
 			mounts := discoverMountsForInteractive(opts)
 			if err := runInteractivePrompt(os.Stdin, os.Stderr, &opts, mounts); err != nil {
 				return err
@@ -174,7 +174,7 @@ func init() {
 	RootCmd.Flags().IntVarP(&crawlingDelay, "delay", "d", 15, "Crawling delay in milliseconds")
 	RootCmd.Flags().BoolVarP(&exitCode, "exit-code", "e", false, "Return exit code 1 when no matches are found")
 	RootCmd.Flags().BoolVarP(&ignoreCase, "ignore-case", "i", false, "Perform case-insensitive matching")
-	RootCmd.Flags().BoolVar(&interactive, "interactive", false, "Launch interactive guided search prompt")
+	RootCmd.Flags().BoolVarP(&interactive, "interactive", "I", false, "Launch interactive guided search prompt")
 	RootCmd.Flags().BoolVarP(&jsonOutput, "json", "j", false, "Output as JSON")
 	RootCmd.Flags().IntVarP(&kvVersion, "kv-version", "k", 0, "KV version (1,2). Autodetect if not defined")
 	RootCmd.Flags().BoolVar(&noColor, "no-color", false, "Disable colored output and match highlighting")

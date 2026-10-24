@@ -984,6 +984,12 @@ func TestInputValidationAndHelpers(t *testing.T) {
 		t.Error("Expected error when 0 args and non-interactive")
 	}
 
+	interactive = true
+	if err := checkInputs(cmd, []string{}); err != nil {
+		t.Errorf("Expected 0 args to pass checkInputs when interactive is true, got: %v", err)
+	}
+	interactive = false
+
 	if err := checkInputs(cmd, []string{"foo"}); err != nil {
 		t.Errorf("Expected 1 arg to pass checkInputs, got: %v", err)
 	}
