@@ -24,7 +24,7 @@
 - **Bounded Concurrency & Rate Limiting:** Configurable worker pool (`-c`) and crawling delay (`-d`) for fast, safe searches.
 - **Graceful Permission Handling:** Automatically skips paths returning `403 Permission Denied` and reports skipped counts in the summary.
 - **Match Highlighting:** Highlights matched substrings in terminal output (respecting `NO_COLOR` and `--no-color`).
-- **Interactive Guided Prompt:** Run with no arguments in a terminal (or `--interactive`) for a guided store and query prompt.
+- **Interactive Guided Prompt:** Pass `-I` / `--interactive` for a guided store and query prompt.
 - **KV v1 and v2 Support:** Works seamlessly with both versions of the KV secrets engine.
 - **Multiple Output Formats:** Choose between human-readable text and structured `json` output.
 - **Cross-Platform:** Builds for Linux, macOS, and Windows.
@@ -66,7 +66,7 @@ Flags:
   -e, --exit-code            Return exit code 1 when no matches are found
   -h, --help                 help for vault-kv-search
   -i, --ignore-case          Perform case-insensitive matching
-      --interactive          Launch interactive guided search prompt
+  -I, --interactive          Launch interactive guided search prompt
   -j, --json                 Output as JSON
   -k, --kv-version int       KV version (1,2). Autodetect if not defined
       --no-color             Disable colored output and match highlighting
@@ -134,7 +134,7 @@ Flags:
 
 11. **Launch interactive guided search prompt:**
     ```sh
-    vault-kv-search --interactive
+    vault-kv-search -I
     ```
 
 12. **Specify Vault address and token via CLI flags (literal token, `@file`, or file path):**
