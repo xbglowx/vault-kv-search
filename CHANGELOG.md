@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/xbglowx/vault-kv-search/compare/v0.6.0...v0.7.0) (2026-10-24)
+
+
+### Features
+
+* require explicit -I/--interactive flag for interactive mode ([cf7defb](https://github.com/xbglowx/vault-kv-search/commit/cf7defb40db4ec1f6219dc2156c5a767c78cf691))
+
 ## [0.6.0](https://github.com/xbglowx/vault-kv-search/compare/v0.5.0...v0.6.0) (2026-10-22)
 
 
