@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/xbglowx/vault-kv-search/compare/v0.7.0...v0.7.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/testcontainers/testcontainers-go to v0.45.0 ([286c037](https://github.com/xbglowx/vault-kv-search/commit/286c037c05cf1e8e830f84d9df1e71a12ea0cb05))
+
 ## [0.7.0](https://github.com/xbglowx/vault-kv-search/compare/v0.6.0...v0.7.0) (2026-10-24)
 
 
