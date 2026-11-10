@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.2](https://github.com/xbglowx/vault-kv-search/compare/v0.7.1...v0.7.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* **deps:** update module golang.org/x/term to v0.48.0 ([d7efaf8](https://github.com/xbglowx/vault-kv-search/commit/d7efaf83dd0bf865215c74992ffb75862ab917ce))
+* **deps:** update module golang.org/x/text to v0.44.0 ([#249](https://github.com/xbglowx/vault-kv-search/issues/249)) ([10a8f74](https://github.com/xbglowx/vault-kv-search/commit/10a8f74ab82f47cfd443b727fc06af8b1e78ab64))
+
 ## [0.7.1](https://github.com/xbglowx/vault-kv-search/compare/v0.7.0...v0.7.1) (2026-11-06)
 
 
